@@ -164,3 +164,43 @@ body {
   padding: 4px 10px;
   font-size: 12px;
 }
+
+/* =========================
+   Tiny loaders (Login)
+   ========================= */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: rgba(255,255,255,1);
+  animation: spin .55s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-60%); }
+  100% { transform: translateX(160%); }
+}
+.progress-bar {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0,145,235,0.14);
+}
+.progress-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 35%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0,145,235,0.85),
+    transparent
+  );
+  animation: shimmer .75s ease-in-out infinite;
+}
