@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getToken } from "./auth";
 
-const baseURL = process.env.NEXT_PUBLIC_API_BASE;
+const baseURL = "https://troca-numeros-api-production.up.railway.app";
 
 export const api = axios.create({
   baseURL,
