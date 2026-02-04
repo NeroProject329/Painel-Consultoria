@@ -151,18 +151,19 @@ async function linkAllNumbers() {
   }
 
   function requestActivate(n: DomainNumberDetail) {
-    if (!detail) return;
+  if (!detail) return;
 
-    const others = n.activeInDomains.filter((x) => x.id !== detail.id);
-    if (others.length > 0) {
-      setConfirmNumber(n);
-      setConfirmOpen(true);
-      return;
-    }
-
-    // sem conflito → ativa direto
-    activateNumber(n.id);
+  const others = n.activeInDomains.filter((x) => x.id !== detail.id);
+  if (others.length > 0) {
+    setConfirmNumber(n);
+    setConfirmOpen(true);
+    return;
   }
+
+  // sem conflito → ativa direto
+  activateNumber(n.id);
+}
+
 
   async function activateNumber(numberId: string) {
     if (!detail) return;
@@ -178,6 +179,33 @@ async function linkAllNumbers() {
       setSaving(false);
     }
   }
+
+  async function activateNumberTransfer(n: DomainNumberDetail) {
+  if (!detail) return;
+
+  setSaving(true);
+  setErr(null);
+
+  try {
+    // 1) desativa onde estiver ativo (exceto aqui)
+    const others = n.activeInDomains.filter((x) => x.id !== detail.id);
+
+    for (const d of others) {
+      await api.patch(`/admin/domains/${d.id}/active-number`, { numberId: null });
+    }
+
+    // 2) ativa aqui
+    await api.patch(`/admin/domains/${detail.id}/active-number`, { numberId: n.id });
+
+    // 3) recarrega tudo
+    await load();
+  } catch (e: any) {
+    setErr(e?.response?.data?.error || "Erro ao transferir ativação do número.");
+  } finally {
+    setSaving(false);
+  }
+}
+
 
   async function deactivateActiveNumber() {
     if (!detail) return;
@@ -456,21 +484,24 @@ async function linkAllNumbers() {
         open={confirmOpen}
         title="Confirmar ativação"
         description={
-          confirmNumber
-            ? `Esse número já está ativo em outro domínio. Deseja ativar também aqui?`
-            : ""
-        }
+  confirmNumber
+    ? `Esse número já está ativo em outro domínio. Ao ativar aqui, ele será desativado no domínio anterior. Deseja continuar?`
+    : ""
+}
         confirmText="Ativar mesmo assim"
         cancelText="Cancelar"
         onClose={() => {
           setConfirmOpen(false);
           setConfirmNumber(null);
         }}
-        onConfirm={() => {
-          if (confirmNumber) activateNumber(confirmNumber.id);
-          setConfirmOpen(false);
-          setConfirmNumber(null);
-        }}
+        onConfirm={async () => {
+  if (confirmNumber) {
+    await activateNumberTransfer(confirmNumber);
+  }
+  setConfirmOpen(false);
+  setConfirmNumber(null);
+}}
+
       />
 
       {/* Modal editar */}
