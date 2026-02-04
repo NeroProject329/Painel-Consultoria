@@ -112,9 +112,7 @@ export default function LoginClient() {
               </button>
             </form>
 
-            <div className="mt-4 text-xs text-[var(--muted)]">
-              API: {process.env.NEXT_PUBLIC_API_BASE || "(env não definido)"}
-            </div>
+            
           </div>
         </div>
 
