@@ -8,6 +8,14 @@ import Switch from "@/components/ui/Switch";
 import type { NumberItem } from "@/types/number";
 import type { DomainDetail, DomainNumberDetail } from "@/types/domainDetail";
 
+function normalizePhone(value: string) {
+  return (value || "").replace(/\D/g, "");
+}
+
+function normalizeText(value: string) {
+  return (value || "").toLowerCase().trim();
+}
+
 export default function DomainDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -22,6 +30,8 @@ export default function DomainDetailPage() {
   // números do sistema (para vincular)
   const [allNumbers, setAllNumbers] = useState<NumberItem[]>([]);
   const [selectedNumberId, setSelectedNumberId] = useState<string>("");
+
+  const [search, setSearch] = useState("");
 
   // modal editar número
   const [editOpen, setEditOpen] = useState(false);
@@ -64,6 +74,27 @@ export default function DomainDetailPage() {
   const availableToLink = useMemo(() => {
     return allNumbers.filter((n) => !linkedIds.has(n._id));
   }, [allNumbers, linkedIds]);
+
+  const filteredDomainNumbers = useMemo(() => {
+    const list = detail?.numbers ?? [];
+    const text = normalizeText(search);
+    const digits = normalizePhone(search);
+
+    if (!text && !digits) return list;
+
+    return list.filter((n) => {
+      const phoneText = normalizeText(n.phone);
+      const phoneDigits = normalizePhone(n.phone);
+      const nameText = normalizeText(n.name);
+
+      const matchesText =
+        !!text && (phoneText.includes(text) || nameText.includes(text));
+
+      const matchesDigits = !!digits && phoneDigits.includes(digits);
+
+      return matchesText || matchesDigits;
+    });
+  }, [detail, search]);
 
   function prettyActiveInOther(n: DomainNumberDetail) {
     const others = n.activeInDomains.filter((x) => x.id !== detail?.id);
@@ -376,8 +407,40 @@ export default function DomainDetailPage() {
           </div>
         </div>
 
+        <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
+          <div className="text-base font-semibold text-neutral-900">
+            Pesquisar neste domínio
+          </div>
+          <p className="text-sm text-neutral-600">
+            Busque por telefone ou nome do atendente.
+          </p>
+
+          <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Ex: 1199999 ou Nome"
+              className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+            />
+
+            {search.trim() && (
+              <button
+                onClick={() => setSearch("")}
+                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+
+          <div className="mt-3 text-sm text-neutral-600">
+            Mostrando <span className="font-semibold">{filteredDomainNumbers.length}</span>{" "}
+            de <span className="font-semibold">{detail.numbers.length}</span> número(s)
+          </div>
+        </div>
+
         <div className="mt-4 space-y-2">
-          {detail.numbers.map((n) => {
+          {filteredDomainNumbers.map((n) => {
             const otherActive = prettyActiveInOther(n);
 
             return (
@@ -440,6 +503,12 @@ export default function DomainDetailPage() {
               </div>
             );
           })}
+
+          {filteredDomainNumbers.length === 0 && detail.numbers.length > 0 && (
+            <div className="text-sm text-neutral-600">
+              Nenhum número encontrado para a busca informada.
+            </div>
+          )}
 
           {detail.numbers.length === 0 && (
             <div className="text-sm text-neutral-600">
