@@ -23,17 +23,14 @@ export default function DomainDetailPage() {
   const [allNumbers, setAllNumbers] = useState<NumberItem[]>([]);
   const [selectedNumberId, setSelectedNumberId] = useState<string>("");
 
-  // modal confirmação ativação
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmNumber, setConfirmNumber] = useState<DomainNumberDetail | null>(null);
-
   // modal editar número
   const [editOpen, setEditOpen] = useState(false);
   const [editNumber, setEditNumber] = useState<DomainNumberDetail | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
-  const [linkAllOpen, setLinkAllOpen] = useState(false);
 
+  // modal vincular todos
+  const [linkAllOpen, setLinkAllOpen] = useState(false);
 
   async function load() {
     setErr(null);
@@ -77,11 +74,17 @@ export default function DomainDetailPage() {
 
   async function toggleDomainActive(nextValue: boolean) {
     if (!detail) return;
+
     setSaving(true);
     setErr(null);
     try {
-      const { data } = await api.patch(`/admin/domains/${detail.id}`, { isActive: nextValue });
-      setDetail((prev) => prev ? { ...prev, isActive: data.item.isActive } : prev);
+      const { data } = await api.patch(`/admin/domains/${detail.id}`, {
+        isActive: nextValue,
+      });
+
+      setDetail((prev) =>
+        prev ? { ...prev, isActive: data.item.isActive } : prev
+      );
     } catch (e: any) {
       setErr(e?.response?.data?.error || "Erro ao atualizar status do domínio.");
     } finally {
@@ -90,13 +93,14 @@ export default function DomainDetailPage() {
   }
 
   async function linkNumber() {
-    if (!detail) return;
-    if (!selectedNumberId) return;
+    if (!detail || !selectedNumberId) return;
 
     setSaving(true);
     setErr(null);
     try {
-      await api.post(`/admin/domains/${detail.id}/numbers`, { numberId: selectedNumberId });
+      await api.post(`/admin/domains/${detail.id}/numbers`, {
+        numberId: selectedNumberId,
+      });
       setSelectedNumberId("");
       await load();
     } catch (e: any) {
@@ -106,38 +110,39 @@ export default function DomainDetailPage() {
     }
   }
 
-async function linkAllNumbers() {
-  if (!detail) return;
+  async function linkAllNumbers() {
+    if (!detail) return;
 
-  const ids = availableToLink.map((n) => n._id);
-  if (ids.length === 0) return;
+    const ids = availableToLink.map((n) => n._id);
+    if (ids.length === 0) return;
 
-  setSaving(true);
-  setErr(null);
+    setSaving(true);
+    setErr(null);
 
-  const failed: string[] = [];
+    const failed: string[] = [];
 
-  // sequencial (evita estourar request)
-  for (const id of ids) {
-    try {
-      await api.post(`/admin/domains/${detail.id}/numbers`, { numberId: id });
-    } catch {
-      failed.push(id);
+    for (const id of ids) {
+      try {
+        await api.post(`/admin/domains/${detail.id}/numbers`, {
+          numberId: id,
+        });
+      } catch {
+        failed.push(id);
+      }
     }
+
+    await load();
+
+    if (failed.length) {
+      setErr(`Falha ao vincular ${failed.length} número(s). Tente novamente.`);
+    }
+
+    setSaving(false);
   }
-
-  await load();
-
-  if (failed.length) {
-    setErr(`Falha ao vincular ${failed.length} número(s). Tente novamente.`);
-  }
-
-  setSaving(false);
-}
-
 
   async function unlinkNumber(numberId: string) {
     if (!detail) return;
+
     setSaving(true);
     setErr(null);
     try {
@@ -150,28 +155,15 @@ async function linkAllNumbers() {
     }
   }
 
-  function requestActivate(n: DomainNumberDetail) {
-  if (!detail) return;
-
-  const others = n.activeInDomains.filter((x) => x.id !== detail.id);
-  if (others.length > 0) {
-    setConfirmNumber(n);
-    setConfirmOpen(true);
-    return;
-  }
-
-  // sem conflito → ativa direto
-  activateNumber(n.id);
-}
-
-
   async function activateNumber(numberId: string) {
     if (!detail) return;
 
     setSaving(true);
     setErr(null);
     try {
-      await api.patch(`/admin/domains/${detail.id}/active-number`, { numberId });
+      await api.patch(`/admin/domains/${detail.id}/active-number`, {
+        numberId,
+      });
       await load();
     } catch (e: any) {
       setErr(e?.response?.data?.error || "Erro ao ativar número.");
@@ -180,40 +172,15 @@ async function linkAllNumbers() {
     }
   }
 
-  async function activateNumberTransfer(n: DomainNumberDetail) {
-  if (!detail) return;
-
-  setSaving(true);
-  setErr(null);
-
-  try {
-    // 1) desativa onde estiver ativo (exceto aqui)
-    const others = n.activeInDomains.filter((x) => x.id !== detail.id);
-
-    for (const d of others) {
-      await api.patch(`/admin/domains/${d.id}/active-number`, { numberId: null });
-    }
-
-    // 2) ativa aqui
-    await api.patch(`/admin/domains/${detail.id}/active-number`, { numberId: n.id });
-
-    // 3) recarrega tudo
-    await load();
-  } catch (e: any) {
-    setErr(e?.response?.data?.error || "Erro ao transferir ativação do número.");
-  } finally {
-    setSaving(false);
-  }
-}
-
-
   async function deactivateActiveNumber() {
     if (!detail) return;
 
     setSaving(true);
     setErr(null);
     try {
-      await api.patch(`/admin/domains/${detail.id}/active-number`, { numberId: null });
+      await api.patch(`/admin/domains/${detail.id}/active-number`, {
+        numberId: null,
+      });
       await load();
     } catch (e: any) {
       setErr(e?.response?.data?.error || "Erro ao desativar número ativo.");
@@ -231,6 +198,7 @@ async function linkAllNumbers() {
 
   async function saveEdit() {
     if (!editNumber) return;
+
     setSaving(true);
     setErr(null);
     try {
@@ -238,6 +206,7 @@ async function linkAllNumbers() {
         name: editName,
         phone: editPhone,
       });
+
       setEditOpen(false);
       setEditNumber(null);
       await load();
@@ -262,6 +231,7 @@ async function linkAllNumbers() {
         <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           Não foi possível carregar o domínio.
         </div>
+
         <button
           onClick={() => router.push("/app/domains")}
           className="mt-4 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm hover:bg-neutral-50"
@@ -274,7 +244,6 @@ async function linkAllNumbers() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
-      {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <button
@@ -309,7 +278,6 @@ async function linkAllNumbers() {
         </div>
       )}
 
-      {/* Status do domínio */}
       <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -321,17 +289,23 @@ async function linkAllNumbers() {
 
           <div className="flex items-center gap-3">
             <div className="text-sm text-neutral-600">Ativar</div>
-            <Switch checked={detail.isActive} onChange={toggleDomainActive} disabled={saving} />
+            <Switch
+              checked={detail.isActive}
+              onChange={toggleDomainActive}
+              disabled={saving}
+            />
           </div>
         </div>
 
         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
           <div className="text-xs text-neutral-500">Número ativo deste domínio</div>
+
           {detail.activeNumberId ? (
             <div className="mt-1 flex items-center justify-between gap-3">
               <div className="text-sm text-neutral-900">
                 Ativo ID: <span className="font-medium">{detail.activeNumberId}</span>
               </div>
+
               <button
                 onClick={deactivateActiveNumber}
                 disabled={saving}
@@ -346,7 +320,6 @@ async function linkAllNumbers() {
         </div>
       </div>
 
-      {/* Vincular número */}
       <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
         <div className="text-base font-semibold text-neutral-900">Vincular número</div>
         <p className="text-sm text-neutral-600">
@@ -371,29 +344,26 @@ async function linkAllNumbers() {
             onClick={linkNumber}
             disabled={saving || !selectedNumberId}
             className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
-            >
-             Vincular
+          >
+            Vincular
           </button>
 
           <button
             onClick={() => setLinkAllOpen(true)}
-
             disabled={saving || availableToLink.length === 0}
             className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50 disabled:opacity-60"
           >
             Vincular todos ({availableToLink.length})
           </button>
-
         </div>
 
         {availableToLink.length === 0 && (
           <div className="mt-2 text-xs text-neutral-500">
-            Nenhum número disponível para vincular (todos já estão vinculados).
+            Nenhum número disponível para vincular neste domínio.
           </div>
         )}
       </div>
 
-      {/* Lista números vinculados */}
       <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
         <div className="flex items-end justify-between gap-3">
           <div>
@@ -420,6 +390,7 @@ async function linkAllNumbers() {
                     <div className="text-sm font-semibold text-neutral-900">
                       {n.phone}
                     </div>
+
                     <div className="text-xs text-neutral-600">
                       Atendente: {n.name}
                     </div>
@@ -430,9 +401,10 @@ async function linkAllNumbers() {
                           Ativo aqui
                         </span>
                       )}
+
                       {otherActive && (
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                          Ativo em: {otherActive}
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-700">
+                          Também ativo em: {otherActive}
                         </span>
                       )}
                     </div>
@@ -440,7 +412,7 @@ async function linkAllNumbers() {
 
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => requestActivate(n)}
+                      onClick={() => activateNumber(n.id)}
                       disabled={saving || !detail.isActive || n.isActiveHere}
                       className="rounded-xl bg-neutral-900 px-3 py-2 text-sm text-white hover:bg-neutral-800 disabled:opacity-60"
                       title={!detail.isActive ? "Domínio inativo" : ""}
@@ -466,8 +438,6 @@ async function linkAllNumbers() {
                   </div>
                 </div>
               </div>
-
-              
             );
           })}
 
@@ -479,32 +449,6 @@ async function linkAllNumbers() {
         </div>
       </div>
 
-      {/* Modal confirmação ativação */}
-      <Modal
-        open={confirmOpen}
-        title="Confirmar ativação"
-        description={
-  confirmNumber
-    ? `Esse número já está ativo em outro domínio. Ao ativar aqui, ele será desativado no domínio anterior. Deseja continuar?`
-    : ""
-}
-        confirmText="Ativar mesmo assim"
-        cancelText="Cancelar"
-        onClose={() => {
-          setConfirmOpen(false);
-          setConfirmNumber(null);
-        }}
-        onConfirm={async () => {
-  if (confirmNumber) {
-    await activateNumberTransfer(confirmNumber);
-  }
-  setConfirmOpen(false);
-  setConfirmNumber(null);
-}}
-
-      />
-
-      {/* Modal editar */}
       <Modal
         open={editOpen}
         title="Editar número"
@@ -519,34 +463,34 @@ async function linkAllNumbers() {
       />
 
       <Modal
-  open={linkAllOpen}
-  title="Vincular todos os números?"
-  description={
-    detail
-      ? `Você está prestes a vincular ${availableToLink.length} número(s) ao domínio ${detail.domain}. Deseja continuar?`
-      : `Deseja continuar?`
-  }
-  confirmText={`Vincular ${availableToLink.length}`}
-  cancelText="Cancelar"
-  onClose={() => setLinkAllOpen(false)}
-  onConfirm={async () => {
-    setLinkAllOpen(false);
-    await linkAllNumbers();
-  }}
-/>
-
+        open={linkAllOpen}
+        title="Vincular todos os números?"
+        description={
+          detail
+            ? `Você está prestes a vincular ${availableToLink.length} número(s) ao domínio ${detail.domain}. Deseja continuar?`
+            : "Deseja continuar?"
+        }
+        confirmText={`Vincular ${availableToLink.length}`}
+        cancelText="Cancelar"
+        onClose={() => setLinkAllOpen(false)}
+        onConfirm={async () => {
+          setLinkAllOpen(false);
+          await linkAllNumbers();
+        }}
+      />
 
       {editOpen && (
         <div className="fixed inset-0 z-[60] pointer-events-none">
-          {/* overlay do modal já existe, então só renderizamos inputs em uma “camada” segura */}
+          {/* camada auxiliar */}
         </div>
       )}
 
-      {/* Inputs do editar: renderizados logo abaixo para ficar simples */}
       {editOpen && (
         <div className="fixed inset-0 z-[55] flex items-center justify-center px-4 pointer-events-none">
           <div className="w-full max-w-md pointer-events-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl">
-            <div className="text-sm font-semibold text-neutral-900">Dados do número</div>
+            <div className="text-sm font-semibold text-neutral-900">
+              Dados do número
+            </div>
 
             <div className="mt-3 space-y-2">
               <div>
@@ -579,6 +523,7 @@ async function linkAllNumbers() {
                 >
                   Cancelar
                 </button>
+
                 <button
                   onClick={saveEdit}
                   disabled={saving || !editName.trim() || !editPhone.trim()}

@@ -19,6 +19,14 @@ function summarizeDomains(domains: string[]) {
   return `${domains[0]} (+${domains.length - 1})`;
 }
 
+function normalizePhone(value: string) {
+  return (value || "").replace(/\D/g, "");
+}
+
+function normalizeText(value: string) {
+  return (value || "").toLowerCase().trim();
+}
+
 export default function NumbersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,6 +34,8 @@ export default function NumbersPage() {
 
   const [numbers, setNumbers] = useState<NumberItem[]>([]);
   const [domains, setDomains] = useState<DomainLite[]>([]);
+
+  const [search, setSearch] = useState("");
 
   // criar
   const [newName, setNewName] = useState("");
@@ -87,6 +97,26 @@ export default function NumbersPage() {
 
     return { activeMap: active, linkedMap: linked };
   }, [domains]);
+
+  const filteredNumbers = useMemo(() => {
+    const text = normalizeText(search);
+    const digits = normalizePhone(search);
+
+    if (!text && !digits) return numbers;
+
+    return numbers.filter((n) => {
+      const phoneText = normalizeText(n.phone);
+      const phoneDigits = normalizePhone(n.phone);
+      const nameText = normalizeText(n.name);
+
+      const matchesText =
+        !!text && (phoneText.includes(text) || nameText.includes(text));
+
+      const matchesDigits = !!digits && phoneDigits.includes(digits);
+
+      return matchesText || matchesDigits;
+    });
+  }, [numbers, search]);
 
   function openEdit(n: NumberItem) {
     setEditItem(n);
@@ -218,6 +248,39 @@ export default function NumbersPage() {
         </div>
       </div>
 
+      {/* Busca */}
+      <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
+        <div className="text-base font-semibold text-neutral-900">
+          Pesquisar números
+        </div>
+        <p className="text-sm text-neutral-600">
+          Busque por telefone ou nome do atendente.
+        </p>
+
+        <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ex: 1199999 ou Nome"
+            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+          />
+
+          {search.trim() && (
+            <button
+              onClick={() => setSearch("")}
+              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3 text-sm text-neutral-600">
+          Mostrando <span className="font-semibold">{filteredNumbers.length}</span>{" "}
+          de <span className="font-semibold">{numbers.length}</span> número(s)
+        </div>
+      </div>
+
       {/* Lista */}
       <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
         <div className="text-base font-semibold text-neutral-900">
@@ -228,7 +291,7 @@ export default function NumbersPage() {
           <div className="mt-4 text-sm text-neutral-600">Carregando…</div>
         ) : (
           <div className="mt-4 space-y-2">
-            {numbers.map((n) => {
+            {filteredNumbers.map((n) => {
               const activeIn = activeMap.get(n._id) ?? [];
               const linkedIn = linkedMap.get(n._id) ?? [];
 
@@ -296,6 +359,12 @@ export default function NumbersPage() {
                 </div>
               );
             })}
+
+            {filteredNumbers.length === 0 && numbers.length > 0 && (
+              <div className="text-sm text-neutral-600">
+                Nenhum número encontrado para a busca informada.
+              </div>
+            )}
 
             {numbers.length === 0 && (
               <div className="text-sm text-neutral-600">
