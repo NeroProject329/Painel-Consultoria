@@ -14,6 +14,7 @@ import {
 } from "react";
 
 import { gsap } from "gsap";
+
 import { clearToken } from "@/lib/auth";
 
 const NAV = [
@@ -35,6 +36,11 @@ const NAV = [
   {
     href: "/app/metrics",
     label: "Métricas",
+  },
+
+  {
+    href: "/app/monitoring",
+    label: "Monitoramento",
   },
 ];
 
@@ -89,38 +95,61 @@ export default function AppShell({
         return "/app/metrics";
       }
 
+      if (
+        pathname.startsWith(
+          "/app/monitoring"
+        )
+      ) {
+        return "/app/monitoring";
+      }
+
       return "/app";
     }, [pathname]);
 
   useEffect(() => {
-    if (headerRef.current) {
+    if (
+      headerRef.current
+    ) {
       gsap.fromTo(
         headerRef.current,
+
         {
           y: -10,
           opacity: 0,
         },
+
         {
           y: 0,
           opacity: 1,
+
           duration: 0.55,
-          ease: "power2.out",
+
+          ease:
+            "power2.out",
         }
       );
     }
 
-    if (mainRef.current) {
+    if (
+      mainRef.current
+    ) {
       gsap.fromTo(
         mainRef.current,
+
         {
           y: 14,
           opacity: 0,
         },
+
         {
           y: 0,
           opacity: 1,
+
           duration: 0.65,
-          ease: "power2.out",
+
+          ease:
+            "power2.out",
+
           delay: 0.08,
         }
       );
@@ -139,7 +168,8 @@ export default function AppShell({
     item: (typeof NAV)[number]
   ) {
     const active =
-      activeHref === item.href;
+      activeHref ===
+      item.href;
 
     return (
       <Link
@@ -191,17 +221,21 @@ export default function AppShell({
 
               <div>
                 <div className="text-sm font-semibold text-[var(--text)]">
-                  Painel — Troca de Números
+                  Painel — Troca
+                  de Números
                 </div>
 
                 <div className="text-xs text-[var(--muted)]">
-                  Futuristic Blue • Admin
+                  Futuristic Blue
+                  • Admin
                 </div>
               </div>
             </div>
 
             <button
-              onClick={logout}
+              onClick={
+                logout
+              }
               className="btn px-3 py-2 text-sm md:hidden"
             >
               Sair
@@ -216,7 +250,9 @@ export default function AppShell({
             </nav>
 
             <button
-              onClick={logout}
+              onClick={
+                logout
+              }
               className="btn hidden px-3 py-2 text-sm md:block"
             >
               Sair
