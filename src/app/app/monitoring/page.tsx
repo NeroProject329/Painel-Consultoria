@@ -373,7 +373,9 @@ export default function MonitoringPage() {
     data?.summary;
 
   const items =
-    data?.items ?? [];
+  (data?.items ?? []).filter(
+    (item) => item.enabled
+  );
 
   const problemCount =
     useMemo(
@@ -552,11 +554,10 @@ export default function MonitoringPage() {
             </p>
           </div>
 
-          <div className="text-xs text-neutral-500">
-            {summary?.total ??
-              0}{" "}
-            cadastrado(s)
-          </div>
+        <div className="text-xs text-neutral-500">
+            {summary?.enabled ?? 0}{" "}
+            monitorado(s)
+        </div>
         </div>
 
         {loading ? (
