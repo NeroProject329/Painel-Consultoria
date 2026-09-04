@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-import { api } from "@/lib/api";
+import { api, apiError } from "@/lib/api";
 
 import type {
   MonitoringListResponse,
@@ -153,9 +153,9 @@ function statusClasses(
 ) {
   if (!enabled) {
     return (
-      "border-neutral-200 " +
-      "bg-neutral-50 " +
-      "text-neutral-600"
+      "border-[var(--border)] " +
+      "bg-[var(--surface-2)] " +
+      "text-[var(--muted)]"
     );
   }
 
@@ -163,9 +163,9 @@ function statusClasses(
     status === "online"
   ) {
     return (
-      "border-emerald-200 " +
-      "bg-emerald-50 " +
-      "text-emerald-700"
+      "border-[var(--border)] " +
+      "bg-[var(--success-bg)] " +
+      "text-[var(--success-text)]"
     );
   }
 
@@ -173,9 +173,9 @@ function statusClasses(
     status === "offline"
   ) {
     return (
-      "border-red-200 " +
-      "bg-red-50 " +
-      "text-red-700"
+      "border-[var(--border)] " +
+      "bg-[var(--danger-bg)] " +
+      "text-[var(--danger-text)]"
     );
   }
 
@@ -183,16 +183,16 @@ function statusClasses(
     status === "unstable"
   ) {
     return (
-      "border-amber-200 " +
-      "bg-amber-50 " +
-      "text-amber-700"
+      "border-[var(--border)] " +
+      "bg-[var(--warning-bg)] " +
+      "text-[var(--warning-text)]"
     );
   }
 
   return (
-    "border-neutral-200 " +
-    "bg-neutral-50 " +
-    "text-neutral-600"
+    "border-[var(--border)] " +
+    "bg-[var(--surface-2)] " +
+    "text-[var(--muted)]"
   );
 }
 
@@ -312,12 +312,10 @@ export default function MonitoringPage() {
             new Date()
           );
         } catch (
-          error: any
+          error: unknown
         ) {
           setErr(
-            error?.response
-              ?.data?.error ||
-              "Erro ao carregar o monitoramento dos sites."
+            apiError(error, "Erro ao carregar o monitoramento dos sites.")
           );
         } finally {
           setLoading(false);
@@ -392,26 +390,26 @@ export default function MonitoringPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold text-neutral-900">
+            <h1 className="text-xl font-semibold text-[var(--text)]">
               Monitoramento
             </h1>
 
             {problemCount >
             0 ? (
-              <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
+              <span className="rounded-full border border-[var(--border)] bg-[var(--danger-bg)] px-2.5 py-1 text-xs font-medium text-[var(--danger-text)]">
                 {problemCount}{" "}
                 site(s) precisam
                 de atenção
               </span>
             ) : data ? (
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+              <span className="rounded-full border border-[var(--border)] bg-[var(--success-bg)] px-2.5 py-1 text-xs font-medium text-[var(--success-text)]">
                 Tudo operando
                 normalmente
               </span>
             ) : null}
           </div>
 
-          <p className="mt-1 text-sm text-neutral-600">
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Acompanhe
             disponibilidade,
             resposta HTTP e
@@ -420,7 +418,7 @@ export default function MonitoringPage() {
           </p>
 
           {lastLoadedAt && (
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-[var(--muted)]">
               Última
               atualização:{" "}
               {lastLoadedAt.toLocaleTimeString(
@@ -441,7 +439,7 @@ export default function MonitoringPage() {
             refreshing ||
             loading
           }
-          className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {refreshing
             ? "Atualizando..."
@@ -450,74 +448,74 @@ export default function MonitoringPage() {
       </div>
 
       {err && (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-text)]">
           {err}
         </div>
       )}
 
       {/* Cards */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-          <div className="text-sm text-neutral-500">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <div className="text-sm text-[var(--muted)]">
             Monitorados
           </div>
 
-          <div className="mt-2 text-3xl font-semibold text-neutral-900">
+          <div className="mt-2 text-3xl font-semibold text-[var(--text)]">
             {summary?.enabled ??
               0}
           </div>
 
-          <div className="mt-1 text-xs text-neutral-500">
+          <div className="mt-1 text-xs text-[var(--muted)]">
             {summary?.disabled ??
               0}{" "}
             desativado(s)
           </div>
         </div>
 
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-          <div className="text-sm text-emerald-700">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--success-bg)]/60 p-4">
+          <div className="text-sm text-[var(--success-text)]">
             Online
           </div>
 
-          <div className="mt-2 text-3xl font-semibold text-emerald-950">
+          <div className="mt-2 text-3xl font-semibold text-[var(--success-text)]">
             {summary?.online ??
               0}
           </div>
 
-          <div className="mt-1 text-xs text-emerald-700/80">
+          <div className="mt-1 text-xs text-[var(--success-text)]/80">
             Sites respondendo
             normalmente
           </div>
         </div>
 
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
-          <div className="text-sm text-amber-700">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--warning-bg)]/60 p-4">
+          <div className="text-sm text-[var(--warning-text)]">
             Instáveis
           </div>
 
-          <div className="mt-2 text-3xl font-semibold text-amber-950">
+          <div className="mt-2 text-3xl font-semibold text-[var(--warning-text)]">
             {summary?.unstable ??
               0}
           </div>
 
-          <div className="mt-1 text-xs text-amber-700/80">
+          <div className="mt-1 text-xs text-[var(--warning-text)]/80">
             Falhas recentes
             ainda não
             confirmadas
           </div>
         </div>
 
-        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-4">
-          <div className="text-sm text-red-700">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--danger-bg)]/60 p-4">
+          <div className="text-sm text-[var(--danger-text)]">
             Offline
           </div>
 
-          <div className="mt-2 text-3xl font-semibold text-red-950">
+          <div className="mt-2 text-3xl font-semibold text-[var(--danger-text)]">
             {summary?.offline ??
               0}
           </div>
 
-          <div className="mt-1 text-xs text-red-700/80">
+          <div className="mt-1 text-xs text-[var(--danger-text)]/80">
             Quedas confirmadas
             pelo worker
           </div>
@@ -528,7 +526,7 @@ export default function MonitoringPage() {
         summary?.unknown ??
         0
       ) > 0 && (
-        <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+        <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text)]">
           {summary?.unknown}{" "}
           site(s) ainda estão
           com status
@@ -539,14 +537,14 @@ export default function MonitoringPage() {
       )}
 
       {/* Lista */}
-      <div className="mt-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-        <div className="flex flex-col gap-1 border-b border-neutral-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+        <div className="flex flex-col gap-1 border-b border-[var(--border)] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-base font-semibold text-neutral-900">
+            <div className="text-base font-semibold text-[var(--text)]">
               Sites
             </div>
 
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-[var(--muted)]">
               Problemas aparecem
               primeiro. Clique em
               um site para abrir
@@ -554,26 +552,26 @@ export default function MonitoringPage() {
             </p>
           </div>
 
-        <div className="text-xs text-neutral-500">
+        <div className="text-xs text-[var(--muted)]">
             {summary?.enabled ?? 0}{" "}
             monitorado(s)
         </div>
         </div>
 
         {loading ? (
-          <div className="p-6 text-sm text-neutral-600">
+          <div className="p-6 text-sm text-[var(--muted)]">
             Carregando
             monitoramento…
           </div>
         ) : items.length ===
           0 ? (
           <div className="p-8 text-center">
-            <div className="text-sm font-medium text-neutral-900">
+            <div className="text-sm font-medium text-[var(--text)]">
               Nenhum site
               monitorado ainda
             </div>
 
-            <p className="mt-1 text-sm text-neutral-600">
+            <p className="mt-1 text-sm text-[var(--muted)]">
               O worker criará os
               registros
               automaticamente a
@@ -590,7 +588,7 @@ export default function MonitoringPage() {
                     item.id
                   }
                   href={`/app/monitoring/${item.id}`}
-                  className="block p-4 transition hover:bg-neutral-50"
+                  className="block p-4 transition hover:bg-[var(--surface-2)]"
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="min-w-0 flex-1">
@@ -602,7 +600,7 @@ export default function MonitoringPage() {
                           )}`}
                         />
 
-                        <div className="truncate text-base font-semibold text-neutral-900">
+                        <div className="truncate text-base font-semibold text-[var(--text)]">
                           {
                             item.domain
                           }
@@ -621,7 +619,7 @@ export default function MonitoringPage() {
                         </span>
                       </div>
 
-                      <div className="mt-1 truncate text-xs text-neutral-500">
+                      <div className="mt-1 truncate text-xs text-[var(--muted)]">
                         {
                           item.url
                         }
@@ -630,7 +628,7 @@ export default function MonitoringPage() {
                       {item.displayStatus ===
                         "offline" &&
                         item.offlineSince && (
-                          <div className="mt-2 text-sm font-medium text-red-700">
+                          <div className="mt-2 text-sm font-medium text-[var(--danger-text)]">
                             Fora do ar{" "}
                             {formatElapsed(
                               item.offlineSince,
@@ -641,7 +639,7 @@ export default function MonitoringPage() {
 
                       {item.displayStatus ===
                         "unstable" && (
-                        <div className="mt-2 text-sm font-medium text-amber-700">
+                        <div className="mt-2 text-sm font-medium text-[var(--warning-text)]">
                           {
                             item.consecutiveFailures
                           }{" "}
@@ -656,7 +654,7 @@ export default function MonitoringPage() {
                       {item.lastError &&
                         item.displayStatus !==
                           "online" && (
-                          <div className="mt-1 text-xs text-neutral-600">
+                          <div className="mt-1 text-xs text-[var(--muted)]">
                             Último
                             erro:{" "}
                             {
@@ -667,48 +665,48 @@ export default function MonitoringPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[520px]">
-                      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                        <div className="text-xs text-neutral-500">
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                        <div className="text-xs text-[var(--muted)]">
                           HTTP
                         </div>
 
-                        <div className="mt-1 text-sm font-semibold text-neutral-900">
+                        <div className="mt-1 text-sm font-semibold text-[var(--text)]">
                           {item.lastHttpStatus ??
                             "—"}
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                        <div className="text-xs text-neutral-500">
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                        <div className="text-xs text-[var(--muted)]">
                           Resposta
                         </div>
 
-                        <div className="mt-1 text-sm font-semibold text-neutral-900">
+                        <div className="mt-1 text-sm font-semibold text-[var(--text)]">
                           {responseText(
                             item
                           )}
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                        <div className="text-xs text-neutral-500">
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                        <div className="text-xs text-[var(--muted)]">
                           Falhas
                         </div>
 
-                        <div className="mt-1 text-sm font-semibold text-neutral-900">
+                        <div className="mt-1 text-sm font-semibold text-[var(--text)]">
                           {
                             item.consecutiveFailures
                           }
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                        <div className="text-xs text-neutral-500">
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                        <div className="text-xs text-[var(--muted)]">
                           Verificação
                         </div>
 
                         <div
-                          className="mt-1 text-sm font-semibold text-neutral-900"
+                          className="mt-1 text-sm font-semibold text-[var(--text)]"
                           title={formatDateTime(
                             item.lastCheckedAt
                           )}

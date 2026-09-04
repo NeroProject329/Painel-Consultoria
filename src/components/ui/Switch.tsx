@@ -16,10 +16,10 @@ export default function Switch({ checked, onChange, disabled }: Props) {
       role="switch"
       className={`relative inline-flex h-7 w-12 items-center rounded-full border transition
       ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
-      ${checked ? "bg-emerald-500/20 border-emerald-400/30" : "bg-white/5 border-white/10"}`}
+      ${checked ? "bg-emerald-500/20 border-emerald-400/30" : "bg-[var(--surface)]/5 border-white/10"}`}
     >
       <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white transition
+        className={`inline-block h-5 w-5 transform rounded-full bg-[var(--surface)] transition
         ${checked ? "translate-x-6" : "translate-x-1"}`}
       />
     </button>

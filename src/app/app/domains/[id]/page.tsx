@@ -1,610 +1,75 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { api, apiError } from "@/lib/api";
 import Modal from "@/components/ui/Modal";
-import Switch from "@/components/ui/Switch";
-import type { NumberItem } from "@/types/number";
 import type { DomainDetail, DomainNumberDetail } from "@/types/domainDetail";
-
-function normalizePhone(value: string) {
-  return (value || "").replace(/\D/g, "");
-}
-
-function normalizeText(value: string) {
-  return (value || "").toLowerCase().trim();
-}
+import type { NumberItem } from "@/types/number";
 
 export default function DomainDetailPage() {
-  const router = useRouter();
-  const params = useParams<{ id: string }>();
-  const domainId = params.id;
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
+  const { id } = useParams<{ id: string }>();
   const [detail, setDetail] = useState<DomainDetail | null>(null);
-
-  // números do sistema (para vincular)
-  const [allNumbers, setAllNumbers] = useState<NumberItem[]>([]);
-  const [selectedNumberId, setSelectedNumberId] = useState<string>("");
-
+  const [numbers, setNumbers] = useState<NumberItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
-
-  // modal editar número
-  const [editOpen, setEditOpen] = useState(false);
-  const [editNumber, setEditNumber] = useState<DomainNumberDetail | null>(null);
+  const [selected, setSelected] = useState("");
+  const [allOpen, setAllOpen] = useState(false);
+  const [editing, setEditing] = useState<DomainNumberDetail | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
-
-  // modal vincular todos
-  const [linkAllOpen, setLinkAllOpen] = useState(false);
-
-  async function load() {
-    setErr(null);
-    setLoading(true);
+  const load = useCallback(async () => {
     try {
-      const [dRes, nRes] = await Promise.all([
-        api.get(`/admin/domains/${domainId}`),
-        api.get("/admin/numbers"),
-      ]);
-
-      setDetail(dRes.data?.item ?? null);
-      setAllNumbers(nRes.data?.items ?? []);
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao carregar domínio.");
-    } finally {
-      setLoading(false);
-    }
+      const [d, n] = await Promise.all([api.get("/admin/domains/" + id), api.get("/admin/numbers")]);
+      setDetail(d.data.item); setNumbers(n.data.items);
+    } catch (e) { setError(apiError(e)); } finally { setLoading(false); }
+  }, [id]);
+  useEffect(() => { void load(); }, [load]);
+  async function mutate(work: () => Promise<unknown>, message: string, done?: () => void) {
+    if (busy) return; setBusy(true); setError(""); setNotice("");
+    try { await work(); done?.(); setNotice(message); await load(); }
+    catch (e) { setError(apiError(e)); } finally { setBusy(false); }
   }
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [domainId]);
-
-  const linkedIds = useMemo(() => {
-    const ids = new Set<string>();
-    detail?.numbers?.forEach((n) => ids.add(n.id));
-    return ids;
-  }, [detail]);
-
-  const availableToLink = useMemo(() => {
-    return allNumbers.filter((n) => !linkedIds.has(n._id));
-  }, [allNumbers, linkedIds]);
-
-  const filteredDomainNumbers = useMemo(() => {
-    const list = detail?.numbers ?? [];
-    const text = normalizeText(search);
-    const digits = normalizePhone(search);
-
-    if (!text && !digits) return list;
-
-    return list.filter((n) => {
-      const phoneText = normalizeText(n.phone);
-      const phoneDigits = normalizePhone(n.phone);
-      const nameText = normalizeText(n.name);
-
-      const matchesText =
-        !!text && (phoneText.includes(text) || nameText.includes(text));
-
-      const matchesDigits = !!digits && phoneDigits.includes(digits);
-
-      return matchesText || matchesDigits;
-    });
-  }, [detail, search]);
-
-  function prettyActiveInOther(n: DomainNumberDetail) {
-    const others = n.activeInDomains.filter((x) => x.id !== detail?.id);
-    if (others.length === 0) return null;
-    if (others.length === 1) return others[0].domain;
-    return `${others[0].domain} (+${others.length - 1})`;
-  }
-
-  async function toggleDomainActive(nextValue: boolean) {
-    if (!detail) return;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      const { data } = await api.patch(`/admin/domains/${detail.id}`, {
-        isActive: nextValue,
-      });
-
-      setDetail((prev) =>
-        prev ? { ...prev, isActive: data.item.isActive } : prev
-      );
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao atualizar status do domínio.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function linkNumber() {
-    if (!detail || !selectedNumberId) return;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      await api.post(`/admin/domains/${detail.id}/numbers`, {
-        numberId: selectedNumberId,
-      });
-      setSelectedNumberId("");
-      await load();
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao vincular número.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function linkAllNumbers() {
-    if (!detail) return;
-
-    const ids = availableToLink.map((n) => n._id);
-    if (ids.length === 0) return;
-
-    setSaving(true);
-    setErr(null);
-
-    const failed: string[] = [];
-
-    for (const id of ids) {
-      try {
-        await api.post(`/admin/domains/${detail.id}/numbers`, {
-          numberId: id,
-        });
-      } catch {
-        failed.push(id);
-      }
-    }
-
-    await load();
-
-    if (failed.length) {
-      setErr(`Falha ao vincular ${failed.length} número(s). Tente novamente.`);
-    }
-
-    setSaving(false);
-  }
-
-  async function unlinkNumber(numberId: string) {
-    if (!detail) return;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      await api.delete(`/admin/domains/${detail.id}/numbers/${numberId}`);
-      await load();
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao desvincular número.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function activateNumber(numberId: string) {
-    if (!detail) return;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      await api.patch(`/admin/domains/${detail.id}/active-number`, {
-        numberId,
-      });
-      await load();
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao ativar número.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function deactivateActiveNumber() {
-    if (!detail) return;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      await api.patch(`/admin/domains/${detail.id}/active-number`, {
-        numberId: null,
-      });
-      await load();
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao desativar número ativo.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function openEdit(n: DomainNumberDetail) {
-    setEditNumber(n);
-    setEditName(n.name);
-    setEditPhone(n.phone);
-    setEditOpen(true);
-  }
-
-  async function saveEdit() {
-    if (!editNumber) return;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      await api.patch(`/admin/numbers/${editNumber.id}`, {
-        name: editName,
-        phone: editPhone,
-      });
-
-      setEditOpen(false);
-      setEditNumber(null);
-      await load();
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao editar número.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <div className="text-sm text-neutral-600">Carregando…</div>
-      </div>
-    );
-  }
-
-  if (!detail) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          Não foi possível carregar o domínio.
-        </div>
-
-        <button
-          onClick={() => router.push("/app/domains")}
-          className="mt-4 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm hover:bg-neutral-50"
-        >
-          Voltar
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <button
-            onClick={() => router.push("/app/domains")}
-            className="text-sm text-neutral-600 hover:text-neutral-900"
-          >
-            ← Voltar para Domínios
-          </button>
-
-          <h1 className="mt-2 text-xl font-semibold text-neutral-900">
-            {detail.domain}
-          </h1>
-          <p className="text-sm text-neutral-600">
-            Gerencie números vinculados e ativação
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={load}
-            disabled={saving}
-            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm hover:bg-neutral-50 disabled:opacity-60"
-          >
-            Recarregar
-          </button>
-        </div>
-      </div>
-
-      {err && (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {err}
-        </div>
-      )}
-
-      <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-sm text-neutral-500">Status do domínio</div>
-            <div className="text-base font-semibold text-neutral-900">
-              {detail.isActive ? "Ativo" : "Inativo"}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-neutral-600">Ativar</div>
-            <Switch
-              checked={detail.isActive}
-              onChange={toggleDomainActive}
-              disabled={saving}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-          <div className="text-xs text-neutral-500">Número ativo deste domínio</div>
-
-          {detail.activeNumberId ? (
-            <div className="mt-1 flex items-center justify-between gap-3">
-              <div className="text-sm text-neutral-900">
-                Ativo ID: <span className="font-medium">{detail.activeNumberId}</span>
-              </div>
-
-              <button
-                onClick={deactivateActiveNumber}
-                disabled={saving}
-                className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm hover:bg-neutral-50 disabled:opacity-60"
-              >
-                Desativar
-              </button>
-            </div>
-          ) : (
-            <div className="mt-1 text-sm text-neutral-600">Sem número ativo</div>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
-        <div className="text-base font-semibold text-neutral-900">Vincular número</div>
-        <p className="text-sm text-neutral-600">
-          Selecione um número já cadastrado para vincular a este domínio.
-        </p>
-
-        <div className="mt-3 flex flex-col gap-2 md:flex-row">
-          <select
-            value={selectedNumberId}
-            onChange={(e) => setSelectedNumberId(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-          >
-            <option value="">Selecione um número…</option>
-            {availableToLink.map((n) => (
-              <option key={n._id} value={n._id}>
-                {n.phone} — {n.name}
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={linkNumber}
-            disabled={saving || !selectedNumberId}
-            className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
-          >
-            Vincular
-          </button>
-
-          <button
-            onClick={() => setLinkAllOpen(true)}
-            disabled={saving || availableToLink.length === 0}
-            className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50 disabled:opacity-60"
-          >
-            Vincular todos ({availableToLink.length})
-          </button>
-        </div>
-
-        {availableToLink.length === 0 && (
-          <div className="mt-2 text-xs text-neutral-500">
-            Nenhum número disponível para vincular neste domínio.
-          </div>
-        )}
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <div className="text-base font-semibold text-neutral-900">
-              Números deste domínio
-            </div>
-            <div className="text-sm text-neutral-600">
-              {detail.numbers.length} vinculados
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
-          <div className="text-base font-semibold text-neutral-900">
-            Pesquisar neste domínio
-          </div>
-          <p className="text-sm text-neutral-600">
-            Busque por telefone ou nome do atendente.
-          </p>
-
-          <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Ex: 1199999 ou Nome"
-              className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-            />
-
-            {search.trim() && (
-              <button
-                onClick={() => setSearch("")}
-                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50"
-              >
-                Limpar
-              </button>
-            )}
-          </div>
-
-          <div className="mt-3 text-sm text-neutral-600">
-            Mostrando <span className="font-semibold">{filteredDomainNumbers.length}</span>{" "}
-            de <span className="font-semibold">{detail.numbers.length}</span> número(s)
-          </div>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {filteredDomainNumbers.map((n) => {
-            const otherActive = prettyActiveInOther(n);
-
-            return (
-              <div
-                key={n.id}
-                className="rounded-2xl border border-neutral-200 bg-white p-3"
-              >
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="text-sm font-semibold text-neutral-900">
-                      {n.phone}
-                    </div>
-
-                    <div className="text-xs text-neutral-600">
-                      Atendente: {n.name}
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {n.isActiveHere && (
-                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
-                          Ativo aqui
-                        </span>
-                      )}
-
-                      {otherActive && (
-                        <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-700">
-                          Também ativo em: {otherActive}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => activateNumber(n.id)}
-                      disabled={saving || !detail.isActive || n.isActiveHere}
-                      className="rounded-xl bg-neutral-900 px-3 py-2 text-sm text-white hover:bg-neutral-800 disabled:opacity-60"
-                      title={!detail.isActive ? "Domínio inativo" : ""}
-                    >
-                      {n.isActiveHere ? "Ativo" : "Ativar"}
-                    </button>
-
-                    <button
-                      onClick={() => openEdit(n)}
-                      disabled={saving}
-                      className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm hover:bg-neutral-50 disabled:opacity-60"
-                    >
-                      Editar
-                    </button>
-
-                    <button
-                      onClick={() => unlinkNumber(n.id)}
-                      disabled={saving}
-                      className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-60"
-                    >
-                      Desvincular
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {filteredDomainNumbers.length === 0 && detail.numbers.length > 0 && (
-            <div className="text-sm text-neutral-600">
-              Nenhum número encontrado para a busca informada.
-            </div>
-          )}
-
-          {detail.numbers.length === 0 && (
-            <div className="text-sm text-neutral-600">
-              Nenhum número vinculado ainda.
-            </div>
-          )}
-        </div>
-      </div>
-
-      <Modal
-        open={editOpen}
-        title="Editar número"
-        description="Altere o nome do atendente e/ou o telefone."
-        confirmText="Salvar"
-        cancelText="Cancelar"
-        onClose={() => {
-          setEditOpen(false);
-          setEditNumber(null);
-        }}
-        onConfirm={saveEdit}
-      />
-
-      <Modal
-        open={linkAllOpen}
-        title="Vincular todos os números?"
-        description={
-          detail
-            ? `Você está prestes a vincular ${availableToLink.length} número(s) ao domínio ${detail.domain}. Deseja continuar?`
-            : "Deseja continuar?"
-        }
-        confirmText={`Vincular ${availableToLink.length}`}
-        cancelText="Cancelar"
-        onClose={() => setLinkAllOpen(false)}
-        onConfirm={async () => {
-          setLinkAllOpen(false);
-          await linkAllNumbers();
-        }}
-      />
-
-      {editOpen && (
-        <div className="fixed inset-0 z-[60] pointer-events-none">
-          {/* camada auxiliar */}
-        </div>
-      )}
-
-      {editOpen && (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center px-4 pointer-events-none">
-          <div className="w-full max-w-md pointer-events-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl">
-            <div className="text-sm font-semibold text-neutral-900">
-              Dados do número
-            </div>
-
-            <div className="mt-3 space-y-2">
-              <div>
-                <label className="text-xs text-neutral-600">Atendente</label>
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-                  placeholder="Nome do atendente"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-neutral-600">Telefone</label>
-                <input
-                  value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-                  placeholder="Só números ou com máscara"
-                />
-              </div>
-
-              <div className="mt-3 flex justify-end gap-2">
-                <button
-                  onClick={() => {
-                    setEditOpen(false);
-                    setEditNumber(null);
-                  }}
-                  className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  onClick={saveEdit}
-                  disabled={saving || !editName.trim() || !editPhone.trim()}
-                  className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
-                >
-                  {saving ? "Salvando..." : "Salvar"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const available = numbers.filter(n => !detail?.numbers.some(linked => linked.id === n._id));
+  const q = search.trim().toLowerCase(), digits = q.replace(/\D/g, "");
+  const filtered = detail?.numbers.filter(n => !q || n.name.toLowerCase().includes(q) || n.phone.includes(q) || (digits && n.phone.includes(digits))) ?? [];
+  const active = detail?.numbers.find(n => n.id === detail.activeNumberId);
+  if (loading) return <p role="status" className="p-6 text-sm">Carregando domínio…</p>;
+  if (!detail) return <div className="p-6"><p role="alert">{error || "Domínio não encontrado."}</p><Link className="mt-4 inline-block underline" href="/app/domains">Voltar para domínios</Link></div>;
+  return <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+    <header><Link className="text-sm text-[var(--muted)] underline underline-offset-4" href="/app/domains">Voltar para domínios</Link>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><h1 className="break-all text-2xl font-semibold">{detail.domain}</h1><p className="mt-1 text-sm text-[var(--muted)]">Gerencie o número ativo e os atendentes disponíveis.</p></div>
+        <button className="btn px-4 py-2 text-sm" disabled={busy} onClick={() => { setError(""); void load(); }}>Atualizar</button></div></header>
+    {error && !editing && !allOpen && <p role="alert" className="rounded-xl bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-text)]">{error}</p>}
+    {notice && <p role="status" className="rounded-xl bg-[var(--success-bg)] p-3 text-sm text-[var(--success-text)]">{notice}</p>}
+    <section className="card p-5"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">Status do domínio</h2>
+      <label className="flex items-center gap-2 text-sm"><input className="h-4 w-4 accent-[var(--brand)]" type="checkbox" checked={detail.isActive} disabled={busy} onChange={e => { const checked = e.target.checked; void mutate(() => api.patch("/admin/domains/" + id, { isActive: checked }), checked ? "Domínio ativado." : "Domínio desativado."); }} />Domínio ativo</label></div>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-5"><div><p className="text-xs text-[var(--muted)]">Número ativo</p><p className="mt-1 font-semibold">{active ? active.name + " · " + active.phone : "Sem número ativo"}</p></div>
+        {active && <button className="btn px-4 py-2 text-sm" disabled={busy} onClick={() => void mutate(() => api.patch("/admin/domains/" + id + "/active-number", { numberId: null }), "Número desativado neste domínio.")}>Desativar número</button>}</div>
+    </section>
+    <section className="card p-5"><h2 className="text-lg font-semibold">Números disponíveis</h2><p className="mt-1 text-sm text-[var(--muted)]">Novos números entram automaticamente. Você também pode restaurar vínculos removidos.</p>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row"><label className="min-w-0 flex-1 text-sm">Vincular um número<select className="input mt-1 w-full" value={selected} onChange={e => setSelected(e.target.value)} disabled={busy}><option value="">Selecione um número</option>{available.map(n => <option key={n._id} value={n._id}>{n.name} · {n.phone}</option>)}</select></label>
+        <div className="flex items-end gap-2"><button className="btn px-4 py-2.5 text-sm" disabled={busy || !selected} onClick={() => void mutate(() => api.post("/admin/domains/" + id + "/numbers", { numberId: selected }), "Número vinculado.", () => setSelected(""))}>Vincular</button>
+          <button className="btn-primary rounded-xl px-4 py-2.5 text-sm" disabled={busy || !available.length} onClick={() => { setError(""); setAllOpen(true); }}>Vincular todos ({available.length})</button></div></div>
+    </section>
+    <section><label className="block text-sm font-medium">Pesquisar neste domínio<input className="input mt-2 w-full" type="search" placeholder="Telefone ou atendente" value={search} onChange={e => setSearch(e.target.value)} /></label>
+      <p className="my-3 text-xs text-[var(--muted)]">{filtered.length} de {detail.numbers.length} número(s)</p>
+      <div className="divide-y divide-[var(--border)] rounded-xl border border-[var(--border)] bg-[var(--surface)]">{filtered.map(n => <article className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between" key={n.id}>
+        <div className="min-w-0"><h2 className="font-semibold">{n.name}</h2><p className="text-sm tabular-nums text-[var(--muted)]">{n.phone}</p>
+          {n.isActiveHere && <span className="mt-1 inline-block text-xs font-medium text-[var(--success-text)]">Ativo neste domínio</span>}
+          {!!n.activeInDomains.filter(d => d.id !== id).length && <p className="mt-1 break-words text-xs text-[var(--muted)]">Também ativo: {n.activeInDomains.filter(d => d.id !== id).map(d => d.domain).join(", ")}</p>}</div>
+        <div className="flex shrink-0 flex-wrap gap-2"><button className="btn-primary rounded-xl px-3 py-2 text-sm" disabled={busy || !detail.isActive || n.isActiveHere} onClick={() => void mutate(() => api.patch("/admin/domains/" + id + "/active-number", { numberId: n.id }), "Número ativado neste domínio.")}>{n.isActiveHere ? "Ativo" : "Ativar"}</button>
+          <button className="btn px-3 py-2 text-sm" disabled={busy} onClick={() => { setError(""); setEditing(n); setEditName(n.name); setEditPhone(n.phone); }}>Editar</button>
+          <button className="btn-danger rounded-xl px-3 py-2 text-sm" disabled={busy} onClick={() => void mutate(() => api.delete("/admin/domains/" + id + "/numbers/" + n.id), "Número desvinculado deste domínio.")}>Desvincular</button></div>
+      </article>)}{!filtered.length && <p className="p-6 text-sm text-[var(--muted)]">Nenhum número encontrado. Ajuste a busca ou vincule um número acima.</p>}</div></section>
+    <Modal open={allOpen} title="Vincular todos os números?" description={available.length + " número(s) serão vinculados a " + detail.domain + ". O número ativo não será alterado."} busy={busy} confirmText="Vincular todos" onClose={() => { setAllOpen(false); setError(""); }} onConfirm={() => void mutate(() => api.post("/admin/domains/" + id + "/numbers/all"), "Todos os números foram vinculados.", () => setAllOpen(false))}>
+      {error && <p role="alert" className="text-sm text-[var(--danger-text)]">{error}</p>}
+    </Modal>
+    <Modal open={!!editing} title="Editar número" confirmText="Salvar alterações" busy={busy} onClose={() => { setEditing(null); setError(""); }} onConfirm={() => { if (editing) void mutate(() => api.patch("/admin/numbers/" + editing.id, { name: editName.trim(), phone: editPhone }), "Número atualizado em todos os domínios.", () => setEditing(null)); }}>
+      <div className="space-y-3">{error && <p role="alert" className="text-sm text-[var(--danger-text)]">{error}</p>}<label className="block text-sm">Atendente<input className="input mt-1 w-full" value={editName} onChange={e => setEditName(e.target.value)} /></label><label className="block text-sm">Telefone<input type="tel" className="input mt-1 w-full" value={editPhone} onChange={e => setEditPhone(e.target.value)} /></label></div>
+    </Modal>
+  </div>;
 }

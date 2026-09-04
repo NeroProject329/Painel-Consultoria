@@ -12,7 +12,7 @@ import {
   useState,
 } from "react";
 
-import { api } from "@/lib/api";
+import { api, apiError } from "@/lib/api";
 
 import type {
   MonitoringDetailResponse,
@@ -179,9 +179,9 @@ function statusClasses(
 ) {
   if (!enabled) {
     return (
-      "border-neutral-200 " +
-      "bg-neutral-50 " +
-      "text-neutral-600"
+      "border-[var(--border)] " +
+      "bg-[var(--surface-2)] " +
+      "text-[var(--muted)]"
     );
   }
 
@@ -189,9 +189,9 @@ function statusClasses(
     status === "online"
   ) {
     return (
-      "border-emerald-200 " +
-      "bg-emerald-50 " +
-      "text-emerald-700"
+      "border-[var(--border)] " +
+      "bg-[var(--success-bg)] " +
+      "text-[var(--success-text)]"
     );
   }
 
@@ -199,9 +199,9 @@ function statusClasses(
     status === "offline"
   ) {
     return (
-      "border-red-200 " +
-      "bg-red-50 " +
-      "text-red-700"
+      "border-[var(--border)] " +
+      "bg-[var(--danger-bg)] " +
+      "text-[var(--danger-text)]"
     );
   }
 
@@ -209,16 +209,16 @@ function statusClasses(
     status === "unstable"
   ) {
     return (
-      "border-amber-200 " +
-      "bg-amber-50 " +
-      "text-amber-700"
+      "border-[var(--border)] " +
+      "bg-[var(--warning-bg)] " +
+      "text-[var(--warning-text)]"
     );
   }
 
   return (
-    "border-neutral-200 " +
-    "bg-neutral-50 " +
-    "text-neutral-600"
+    "border-[var(--border)] " +
+    "bg-[var(--surface-2)] " +
+    "text-[var(--muted)]"
   );
 }
 
@@ -230,7 +230,7 @@ function IncidentCard({
   now: number;
 }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4">
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="w-full">
           <div className="flex flex-wrap items-center gap-2">
@@ -239,8 +239,8 @@ function IncidentCard({
                 "rounded-full border px-2.5 py-1 text-xs font-medium",
 
                 item.isOpen
-                  ? "border-red-200 bg-red-50 text-red-700"
-                  : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                  ? "border-[var(--border)] bg-[var(--danger-bg)] text-[var(--danger-text)]"
+                  : "border-[var(--border)] bg-[var(--success-bg)] text-[var(--success-text)]",
               ].join(" ")}
             >
               {item.isOpen
@@ -248,7 +248,7 @@ function IncidentCard({
                 : "Recuperado"}
             </span>
 
-            <span className="text-sm font-semibold text-neutral-900">
+            <span className="text-sm font-semibold text-[var(--text)]">
               {item.isOpen
                 ? "Site offline"
                 : "Incidente encerrado"}
@@ -257,11 +257,11 @@ function IncidentCard({
 
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <div className="text-xs text-neutral-500">
+              <div className="text-xs text-[var(--muted)]">
                 Início
               </div>
 
-              <div className="mt-1 text-sm font-medium text-neutral-900">
+              <div className="mt-1 text-sm font-medium text-[var(--text)]">
                 {formatDateTime(
                   item.startedAt
                 )}
@@ -269,11 +269,11 @@ function IncidentCard({
             </div>
 
             <div>
-              <div className="text-xs text-neutral-500">
+              <div className="text-xs text-[var(--muted)]">
                 Fim
               </div>
 
-              <div className="mt-1 text-sm font-medium text-neutral-900">
+              <div className="mt-1 text-sm font-medium text-[var(--text)]">
                 {item.endedAt
                   ? formatDateTime(
                       item.endedAt
@@ -283,11 +283,11 @@ function IncidentCard({
             </div>
 
             <div>
-              <div className="text-xs text-neutral-500">
+              <div className="text-xs text-[var(--muted)]">
                 Duração
               </div>
 
-              <div className="mt-1 text-sm font-medium text-neutral-900">
+              <div className="mt-1 text-sm font-medium text-[var(--text)]">
                 {formatDuration(
                   item.durationMs,
                   item.startedAt,
@@ -297,11 +297,11 @@ function IncidentCard({
             </div>
 
             <div>
-              <div className="text-xs text-neutral-500">
+              <div className="text-xs text-[var(--muted)]">
                 HTTP na queda
               </div>
 
-              <div className="mt-1 text-sm font-medium text-neutral-900">
+              <div className="mt-1 text-sm font-medium text-[var(--text)]">
                 {item.httpStatus ??
                   "Sem resposta"}
               </div>
@@ -309,7 +309,7 @@ function IncidentCard({
           </div>
 
           {item.reason && (
-            <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
+            <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text)]">
               Motivo:{" "}
               {item.reason}
             </div>
@@ -421,12 +421,10 @@ export default function MonitoringDetailPage() {
             incidentsResponse.data
           );
         } catch (
-          error: any
+          error: unknown
         ) {
           setErr(
-            error?.response
-              ?.data?.error ||
-              "Erro ao carregar os detalhes do monitoramento."
+            apiError(error, "Erro ao carregar os detalhes do monitoramento.")
           );
         } finally {
           setLoading(false);
@@ -492,7 +490,7 @@ export default function MonitoringDetailPage() {
       <div className="mx-auto max-w-6xl px-4 py-6">
         <Link
           href="/app/monitoring"
-          className="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900"
+          className="inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--text)]"
         >
           <span aria-hidden>
             ←
@@ -501,7 +499,7 @@ export default function MonitoringDetailPage() {
           Voltar
         </Link>
 
-        <div className="mt-6 text-sm text-neutral-600">
+        <div className="mt-6 text-sm text-[var(--muted)]">
           Carregando
           detalhes…
         </div>
@@ -515,7 +513,7 @@ export default function MonitoringDetailPage() {
         <div>
           <Link
             href="/app/monitoring"
-            className="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900"
+            className="inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--text)]"
           >
             <span aria-hidden>
               ←
@@ -526,7 +524,7 @@ export default function MonitoringDetailPage() {
           </Link>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold text-neutral-900">
+            <h1 className="text-xl font-semibold text-[var(--text)]">
               {item?.domain ??
                 "Monitoramento"}
             </h1>
@@ -547,7 +545,7 @@ export default function MonitoringDetailPage() {
           </div>
 
           {item && (
-            <p className="mt-1 text-sm text-neutral-600">
+            <p className="mt-1 text-sm text-[var(--muted)]">
               {item.url}
             </p>
           )}
@@ -560,7 +558,7 @@ export default function MonitoringDetailPage() {
           disabled={
             refreshing
           }
-          className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {refreshing
             ? "Atualizando..."
@@ -569,7 +567,7 @@ export default function MonitoringDetailPage() {
       </div>
 
       {err && (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-text)]">
           {err}
         </div>
       )}
@@ -581,13 +579,13 @@ export default function MonitoringDetailPage() {
           {item.displayStatus ===
             "offline" &&
             item.offlineSince && (
-              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4">
-                <div className="text-sm font-semibold text-red-900">
+              <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--danger-bg)] p-4">
+                <div className="text-sm font-semibold text-[var(--danger-text)]">
                   Este site está
                   fora do ar
                 </div>
 
-                <div className="mt-1 text-sm text-red-700">
+                <div className="mt-1 text-sm text-[var(--danger-text)]">
                   Queda confirmada
                   há{" "}
                   {formatDuration(
@@ -606,14 +604,14 @@ export default function MonitoringDetailPage() {
 
           {item.displayStatus ===
             "unstable" && (
-            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <div className="text-sm font-semibold text-amber-900">
+            <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--warning-bg)] p-4">
+              <div className="text-sm font-semibold text-[var(--warning-text)]">
                 O site está
                 apresentando
                 instabilidade
               </div>
 
-              <div className="mt-1 text-sm text-amber-700">
+              <div className="mt-1 text-sm text-[var(--warning-text)]">
                 {
                   item.consecutiveFailures
                 }{" "}
@@ -630,23 +628,23 @@ export default function MonitoringDetailPage() {
           {/* Cards */}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-              <div className="text-sm text-neutral-500">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="text-sm text-[var(--muted)]">
                 HTTP atual
               </div>
 
-              <div className="mt-2 text-2xl font-semibold text-neutral-900">
+              <div className="mt-2 text-2xl font-semibold text-[var(--text)]">
                 {item.lastHttpStatus ??
                   "—"}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-              <div className="text-sm text-neutral-500">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="text-sm text-[var(--muted)]">
                 Tempo de resposta
               </div>
 
-              <div className="mt-2 text-2xl font-semibold text-neutral-900">
+              <div className="mt-2 text-2xl font-semibold text-[var(--text)]">
                 {item.lastResponseTimeMs !==
                 null
                   ? `${item.lastResponseTimeMs} ms`
@@ -654,26 +652,26 @@ export default function MonitoringDetailPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-              <div className="text-sm text-neutral-500">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="text-sm text-[var(--muted)]">
                 Falhas
                 consecutivas
               </div>
 
-              <div className="mt-2 text-2xl font-semibold text-neutral-900">
+              <div className="mt-2 text-2xl font-semibold text-[var(--text)]">
                 {
                   item.consecutiveFailures
                 }
               </div>
             </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-              <div className="text-sm text-neutral-500">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="text-sm text-[var(--muted)]">
                 Incidentes
                 registrados
               </div>
 
-              <div className="mt-2 text-2xl font-semibold text-neutral-900">
+              <div className="mt-2 text-2xl font-semibold text-[var(--text)]">
                 {
                   item.incidentCount
                 }
@@ -684,45 +682,45 @@ export default function MonitoringDetailPage() {
           {/* Informações */}
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-              <div className="text-base font-semibold text-neutral-900">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="text-base font-semibold text-[var(--text)]">
                 Últimas
                 verificações
               </div>
 
               <div className="mt-4 space-y-3 text-sm">
-                <div className="flex items-start justify-between gap-4 border-b border-neutral-100 pb-3">
-                  <span className="text-neutral-500">
+                <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] pb-3">
+                  <span className="text-[var(--muted)]">
                     Última
                     verificação
                   </span>
 
-                  <span className="text-right font-medium text-neutral-900">
+                  <span className="text-right font-medium text-[var(--text)]">
                     {formatDateTime(
                       item.lastCheckedAt
                     )}
                   </span>
                 </div>
 
-                <div className="flex items-start justify-between gap-4 border-b border-neutral-100 pb-3">
-                  <span className="text-neutral-500">
+                <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] pb-3">
+                  <span className="text-[var(--muted)]">
                     Última vez
                     online
                   </span>
 
-                  <span className="text-right font-medium text-neutral-900">
+                  <span className="text-right font-medium text-[var(--text)]">
                     {formatDateTime(
                       item.lastOnlineAt
                     )}
                   </span>
                 </div>
 
-                <div className="flex items-start justify-between gap-4 border-b border-neutral-100 pb-3">
-                  <span className="text-neutral-500">
+                <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] pb-3">
+                  <span className="text-[var(--muted)]">
                     Última queda
                   </span>
 
-                  <span className="text-right font-medium text-neutral-900">
+                  <span className="text-right font-medium text-[var(--text)]">
                     {formatDateTime(
                       item.lastOfflineAt
                     )}
@@ -730,12 +728,12 @@ export default function MonitoringDetailPage() {
                 </div>
 
                 <div className="flex items-start justify-between gap-4">
-                  <span className="text-neutral-500">
+                  <span className="text-[var(--muted)]">
                     Sucessos
                     consecutivos
                   </span>
 
-                  <span className="text-right font-medium text-neutral-900">
+                  <span className="text-right font-medium text-[var(--text)]">
                     {
                       item.consecutiveSuccesses
                     }
@@ -744,19 +742,19 @@ export default function MonitoringDetailPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-              <div className="text-base font-semibold text-neutral-900">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="text-base font-semibold text-[var(--text)]">
                 Notificações
               </div>
 
               <div className="mt-4 space-y-3 text-sm">
-                <div className="flex items-start justify-between gap-4 border-b border-neutral-100 pb-3">
-                  <span className="text-neutral-500">
+                <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] pb-3">
+                  <span className="text-[var(--muted)]">
                     Último alerta
                     de queda
                   </span>
 
-                  <span className="text-right font-medium text-neutral-900">
+                  <span className="text-right font-medium text-[var(--text)]">
                     {formatDateTime(
                       item.lastNotifiedDownAt
                     )}
@@ -764,12 +762,12 @@ export default function MonitoringDetailPage() {
                 </div>
 
                 <div className="flex items-start justify-between gap-4">
-                  <span className="text-neutral-500">
+                  <span className="text-[var(--muted)]">
                     Último alerta
                     de recuperação
                   </span>
 
-                  <span className="text-right font-medium text-neutral-900">
+                  <span className="text-right font-medium text-[var(--text)]">
                     {formatDateTime(
                       item.lastNotifiedRecoveryAt
                     )}
@@ -778,12 +776,12 @@ export default function MonitoringDetailPage() {
               </div>
 
               {item.lastError && (
-                <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                  <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                  <div className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
                     Último erro
                   </div>
 
-                  <div className="mt-1 break-words text-sm text-neutral-800">
+                  <div className="mt-1 break-words text-sm text-[var(--text)]">
                     {
                       item.lastError
                     }
@@ -800,12 +798,12 @@ export default function MonitoringDetailPage() {
       <div className="mt-6">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-neutral-900">
+            <h2 className="text-lg font-semibold text-[var(--text)]">
               Histórico de
               incidentes
             </h2>
 
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-[var(--muted)]">
               Quedas confirmadas
               e períodos de
               indisponibilidade
@@ -814,7 +812,7 @@ export default function MonitoringDetailPage() {
             </p>
           </div>
 
-          <div className="text-xs text-neutral-500">
+          <div className="text-xs text-[var(--muted)]">
             {incidents?.total ??
               0}{" "}
             incidente(s) no
@@ -827,13 +825,13 @@ export default function MonitoringDetailPage() {
             incidents?.items
               .length ?? 0
           ) === 0 ? (
-            <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center">
-              <div className="text-sm font-medium text-neutral-900">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+              <div className="text-sm font-medium text-[var(--text)]">
                 Nenhum incidente
                 registrado
               </div>
 
-              <p className="mt-1 text-sm text-neutral-600">
+              <p className="mt-1 text-sm text-[var(--muted)]">
                 Ótimo sinal:
                 ainda não existe
                 nenhuma queda

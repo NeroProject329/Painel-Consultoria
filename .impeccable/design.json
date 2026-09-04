@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-04T11:44:09.879Z",
+  "title": "Design System: Painel de Números",
+  "extensions": {
+    "colorMeta": {
+      "brand": {
+        "displayName": "Menta",
+        "role": "primary",
+        "tonalRamp": [
+          "oklch(15% 0.14 155)",
+          "oklch(26% 0.14 155)",
+          "oklch(38% 0.14 155)",
+          "oklch(49% 0.14 155)",
+          "oklch(61% 0.14 155)",
+          "oklch(72% 0.14 155)",
+          "oklch(84% 0.14 155)",
+          "oklch(95% 0.14 155)"
+        ]
+      },
+      "brand-2": {
+        "displayName": "Menta clara",
+        "role": "primary",
+        "tonalRamp": [
+          "oklch(15% 0.1 155)",
+          "oklch(26% 0.1 155)",
+          "oklch(38% 0.1 155)",
+          "oklch(49% 0.1 155)",
+          "oklch(61% 0.1 155)",
+          "oklch(72% 0.1 155)",
+          "oklch(84% 0.1 155)",
+          "oklch(95% 0.1 155)"
+        ]
+      },
+      "bg": {
+        "displayName": "Fundo verde escuro",
+        "role": "neutral",
+        "tonalRamp": [
+          "oklch(15% 0.025 155)",
+          "oklch(26% 0.025 155)",
+          "oklch(38% 0.025 155)",
+          "oklch(49% 0.025 155)",
+          "oklch(61% 0.025 155)",
+          "oklch(72% 0.025 155)",
+          "oklch(84% 0.025 155)",
+          "oklch(95% 0.025 155)"
+        ]
+      },
+      "surface": {
+        "displayName": "Painel verde",
+        "role": "neutral",
+        "tonalRamp": [
+          "oklch(15% 0.035 155)",
+          "oklch(26% 0.035 155)",
+          "oklch(38% 0.035 155)",
+          "oklch(49% 0.035 155)",
+          "oklch(61% 0.035 155)",
+          "oklch(72% 0.035 155)",
+          "oklch(84% 0.035 155)",
+          "oklch(95% 0.035 155)"
+        ]
+      },
+      "surface-2": {
+        "displayName": "Painel verde elevado",
+        "role": "neutral",
+        "tonalRamp": [
+          "oklch(15% 0.045 155)",
+          "oklch(26% 0.045 155)",
+          "oklch(38% 0.045 155)",
+          "oklch(49% 0.045 155)",
+          "oklch(61% 0.045 155)",
+          "oklch(72% 0.045 155)",
+          "oklch(84% 0.045 155)",
+          "oklch(95% 0.045 155)"
+        ]
+      },
+      "text": {
+        "displayName": "Texto claro",
+        "role": "neutral",
+        "tonalRamp": [
+          "oklch(15% 0.02 155)",
+          "oklch(26% 0.02 155)",
+          "oklch(38% 0.02 155)",
+          "oklch(49% 0.02 155)",
+          "oklch(61% 0.02 155)",
+          "oklch(72% 0.02 155)",
+          "oklch(84% 0.02 155)",
+          "oklch(95% 0.02 155)"
+        ]
+      },
+      "muted": {
+        "displayName": "Texto verde suave",
+        "role": "neutral",
+        "tonalRamp": [
+          "oklch(15% 0.04 155)",
+          "oklch(26% 0.04 155)",
+          "oklch(38% 0.04 155)",
+          "oklch(49% 0.04 155)",
+          "oklch(61% 0.04 155)",
+          "oklch(72% 0.04 155)",
+          "oklch(84% 0.04 155)",
+          "oklch(95% 0.04 155)"
+        ]
+      },
+      "border": {
+        "displayName": "Borda verde",
+        "role": "neutral",
+        "tonalRamp": [
+          "oklch(15% 0.04 155)",
+          "oklch(26% 0.04 155)",
+          "oklch(38% 0.04 155)",
+          "oklch(49% 0.04 155)",
+          "oklch(61% 0.04 155)",
+          "oklch(72% 0.04 155)",
+          "oklch(84% 0.04 155)",
+          "oklch(95% 0.04 155)"
+        ]
+      }
+    },
+    "shadows": [
+      {
+        "name": "nav-current",
+        "value": "inset 0 0 0 1px #3b624b",
+        "purpose": "Contorno interno da navegação ativa."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "150ms ease",
+        "purpose": "Mudanças de fundo e borda; movimento reduzido respeitado."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-fields",
+        "value": "640px"
+      },
+      {
+        "name": "bulk-columns",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Ativar nos sites",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "html": "<button class=\"ds-primary\">Ativar nos sites</button>",
+      "css": ".ds-primary{font-family:var(--font-sans,system-ui);background:var(--brand,#7bffb2);color:var(--bg,#07110d);border:1px solid var(--border,#2a4636);border-radius:10px;min-height:40px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:background-color 150ms ease,border-color 150ms ease}.ds-primary:hover:not(:disabled){background:var(--brand-2,#a5ffc9)}.ds-primary:focus-visible{outline:2px solid var(--brand,#7bffb2);outline-offset:4px}.ds-primary:disabled{opacity:.5;cursor:not-allowed}"
+    },
+    {
+      "name": "Cancelar",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "html": "<button class=\"ds-secondary\">Cancelar</button>",
+      "css": ".ds-secondary{font-family:var(--font-sans,system-ui);background:var(--surface,#0c1b14);color:var(--text,#ecfff5);border:1px solid var(--border,#2a4636);border-radius:10px;min-height:40px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:background-color 150ms ease,border-color 150ms ease}.ds-secondary:hover:not(:disabled){background:var(--surface-hover,#173323)}.ds-secondary:focus-visible{outline:2px solid var(--brand,#7bffb2);outline-offset:4px}.ds-secondary:disabled{opacity:.5;cursor:not-allowed}"
+    },
+    {
+      "name": "Excluir",
+      "kind": "button",
+      "html": "<button class=\"ds-danger\">Excluir</button>",
+      "css": ".ds-danger{font-family:var(--font-sans,system-ui);background:var(--danger-bg,#32191c);color:var(--danger-text,#ffb6bf);border:1px solid var(--border,#2a4636);border-radius:10px;min-height:40px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:background-color 150ms ease,border-color 150ms ease}.ds-danger:hover:not(:disabled){background:#46232a}.ds-danger:focus-visible{outline:2px solid var(--brand,#7bffb2);outline-offset:4px}.ds-danger:disabled{opacity:.5;cursor:not-allowed}"
+    },
+    {
+      "name": "Buscar número",
+      "kind": "input",
+      "refersTo": "input",
+      "html": "<label class=\"ds-label\">Buscar número<input class=\"ds-input\" placeholder=\"Telefone ou atendente\"></label>",
+      "css": ".ds-label{display:grid;gap:4px;color:var(--text,#ecfff5);font:14px system-ui}.ds-input{background:var(--bg,#07110d);color:var(--text,#ecfff5);border:1px solid var(--border,#2a4636);border-radius:10px;padding:10px 12px;min-height:42px;font:16px system-ui}.ds-input::placeholder{color:#96b5a3}.ds-input:focus{outline:2px solid var(--brand,#7bffb2);outline-offset:2px}"
+    },
+    {
+      "name": "Navegação",
+      "kind": "nav",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Exemplo\"><a href=\"#dashboard\" aria-current=\"page\">Dashboard</a><a href=\"#numbers\">Números</a></nav>",
+      "css": ".ds-nav{display:flex;flex-wrap:wrap;gap:4px}.ds-nav a{padding:10px 14px;border-radius:10px;font:14px system-ui;text-decoration:none;color:var(--muted,#b9d6c5);transition:background-color 150ms ease}.ds-nav a:hover{background:var(--surface-hover,#173323);color:var(--text,#ecfff5)}.ds-nav a[aria-current]{background:var(--surface-2,#11271c);color:var(--brand,#7bffb2);box-shadow:inset 0 0 0 1px #3b624b}.ds-nav a:focus-visible{outline:2px solid var(--brand,#7bffb2);outline-offset:4px}"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "html": "<span class=\"ds-badge\">Ativo</span>",
+      "css": ".ds-badge{display:inline-flex;border:1px solid var(--border,#2a4636);background:var(--surface-2,#11271c);color:var(--brand-2,#a5ffc9);border-radius:999px;padding:4px 10px;font:12px system-ui}"
+    },
+    {
+      "name": "Painel",
+      "kind": "card",
+      "refersTo": "card",
+      "html": "<section class=\"ds-card\"><h2>Domínios ativos</h2><p>Selecione os domínios para continuar.</p></section>",
+      "css": ".ds-card{background:var(--surface,#0c1b14);border:1px solid var(--border,#2a4636);border-radius:16px;padding:20px;color:var(--text,#ecfff5);font:14px system-ui}.ds-card h2{margin:0;font-size:18px;font-weight:600;letter-spacing:-.015em}.ds-card p{margin:4px 0 0;color:var(--muted,#b9d6c5)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Operação na linguagem visual do CRM",
+    "overview": "Verdes escuros, acentos menta, texto claro e bordas discretas organizam tarefas reais de administração. A interface mantém densidade moderada e controles explícitos, sem animações de entrada.\n\nA autoridade visual é `NeroProject329/crm-ads-whatsapp/main/apps/web`, commit `bc9a15f0590d0c70f2c07e9f778c0ab7b61d8a9e`. Sua tela-base fornece paleta, tipografia e caráter; o painel adapta a composição aos seus fluxos. Não é uma réplica de um dashboard existente na referência.",
+    "keyCharacteristics": [
+      "Superfícies verde-escuras com bordas discretas.",
+      "Menta para ações e orientação.",
+      "Tipografia local, informação legível e estados explícitos."
+    ],
+    "rules": [
+      {
+        "name": "The Continuidade Rule",
+        "body": "A PWA e o viewport usam o mesmo fundo escuro do aplicativo.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do preservar a linguagem visual da referência confirmada.",
+      "Do distinguir seleção, confirmação, carregamento, erro e resultado.",
+      "Do manter foco visível e navegação utilizável em telas estreitas."
+    ],
+    "donts": [
+      "Don't descrever a adaptação operacional como réplica exata da tela-base.",
+      "Don't adicionar fontes de rede ou animações de entrada.",
+      "Don't apresentar ausência de conexão como operação concluída."
+    ]
+  }
+}

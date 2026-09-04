@@ -1,480 +1,88 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { api } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { api, apiError } from "@/lib/api";
+import Modal from "@/components/ui/Modal";
 import type { NumberItem } from "@/types/number";
 
-type DomainLite = {
-  _id: string;
-  domain: string;
-  isActive: boolean;
-  activeNumberId?: string | null;
-  numbers?: string[];
-};
-
-function summarizeDomains(domains: string[]) {
-  if (domains.length === 0) return null;
-  if (domains.length === 1) return domains[0];
-  return `${domains[0]} (+${domains.length - 1})`;
-}
-
-function normalizePhone(value: string) {
-  return (value || "").replace(/\D/g, "");
-}
-
-function normalizeText(value: string) {
-  return (value || "").toLowerCase().trim();
-}
-
+type Domain = { _id: string; domain: string; isActive: boolean; activeNumberId?: string | null };
 export default function NumbersPage() {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
   const [numbers, setNumbers] = useState<NumberItem[]>([]);
-  const [domains, setDomains] = useState<DomainLite[]>([]);
-
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
-
-  // criar
-  const [newName, setNewName] = useState("");
-  const [newPhone, setNewPhone] = useState("");
-
-  // editar modal
-  const [editOpen, setEditOpen] = useState(false);
-  const [editItem, setEditItem] = useState<NumberItem | null>(null);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [editing, setEditing] = useState<NumberItem | null>(null);
+  const [deleting, setDeleting] = useState<NumberItem | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
-
-  // delete confirm
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteItem, setDeleteItem] = useState<NumberItem | null>(null);
-
-  async function load() {
-    setErr(null);
-    setLoading(true);
+  const load = useCallback(async () => {
     try {
-      const [nRes, dRes] = await Promise.all([
-        api.get("/admin/numbers"),
-        api.get("/admin/domains"),
-      ]);
-
-      setNumbers(nRes.data?.items ?? []);
-      setDomains(dRes.data?.items ?? []);
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao carregar números.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
+      const [n, d] = await Promise.all([api.get("/admin/numbers"), api.get("/admin/domains")]);
+      setNumbers(n.data.items); setDomains(d.data.items);
+    } catch (e) { setError(apiError(e)); }
+    finally { setLoading(false); }
   }, []);
-
-  // Mapas: numberId -> [domínios]
-  const { activeMap, linkedMap } = useMemo(() => {
-    const active = new Map<string, string[]>();
-    const linked = new Map<string, string[]>();
-
-    for (const d of domains) {
-      const activeId = d.activeNumberId ? String(d.activeNumberId) : null;
-      if (activeId) {
-        const arr = active.get(activeId) ?? [];
-        arr.push(d.domain);
-        active.set(activeId, arr);
-      }
-
-      const list = d.numbers ?? [];
-      for (const nId of list) {
-        const id = String(nId);
-        const arr = linked.get(id) ?? [];
-        arr.push(d.domain);
-        linked.set(id, arr);
-      }
-    }
-
-    return { activeMap: active, linkedMap: linked };
-  }, [domains]);
-
-  const filteredNumbers = useMemo(() => {
-    const text = normalizeText(search);
-    const digits = normalizePhone(search);
-
-    if (!text && !digits) return numbers;
-
-    return numbers.filter((n) => {
-      const phoneText = normalizeText(n.phone);
-      const phoneDigits = normalizePhone(n.phone);
-      const nameText = normalizeText(n.name);
-
-      const matchesText =
-        !!text && (phoneText.includes(text) || nameText.includes(text));
-
-      const matchesDigits = !!digits && phoneDigits.includes(digits);
-
-      return matchesText || matchesDigits;
-    });
+  useEffect(() => { void load(); }, [load]);
+  const filtered = useMemo(() => {
+    const q = search.toLocaleLowerCase("pt-BR").trim(); const digits = q.replace(/\D/g, "");
+    return numbers.filter(n => !q || n.name.toLocaleLowerCase("pt-BR").includes(q) || n.phone.includes(q) || (digits && n.phone.includes(digits)));
   }, [numbers, search]);
-
-  function openEdit(n: NumberItem) {
-    setEditItem(n);
-    setEditName(n.name);
-    setEditPhone(n.phone);
-    setEditOpen(true);
+  async function create(event: React.FormEvent) {
+    event.preventDefault(); if (busy) return;
+    setBusy(true); setError(""); setNotice("");
+    try { await api.post("/admin/numbers", { name: name.trim(), phone });
+      setName(""); setPhone(""); setNotice("Número cadastrado e vinculado a todos os domínios. Nenhum número ativo foi alterado."); await load();
+    } catch (e) { setError(apiError(e)); } finally { setBusy(false); }
   }
-
-  async function saveEdit() {
-    if (!editItem) return;
-    setSaving(true);
-    setErr(null);
-    try {
-      await api.patch(`/admin/numbers/${editItem._id}`, {
-        name: editName,
-        phone: editPhone,
-      });
-      setEditOpen(false);
-      setEditItem(null);
-      await load();
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao editar número.");
-    } finally {
-      setSaving(false);
-    }
+  async function save() {
+    if (!editing || busy) return; setBusy(true); setError("");
+    try { await api.patch("/admin/numbers/" + editing._id, { name: editName.trim(), phone: editPhone });
+      setEditing(null); setNotice("Número atualizado."); await load();
+    } catch (e) { setError(apiError(e)); } finally { setBusy(false); }
   }
-
-  function requestDelete(n: NumberItem) {
-    setDeleteItem(n);
-    setDeleteOpen(true);
+  async function remove() {
+    if (!deleting || busy) return; setBusy(true); setError("");
+    try { await api.delete("/admin/numbers/" + deleting._id); setDeleting(null);
+      setNotice("Número excluído. Os outros números ativos foram preservados."); await load();
+    } catch (e) { setError(apiError(e)); } finally { setBusy(false); }
   }
-
-  async function confirmDelete() {
-    if (!deleteItem) return;
-    setSaving(true);
-    setErr(null);
-    try {
-      await api.delete(`/admin/numbers/${deleteItem._id}`);
-      setDeleteOpen(false);
-      setDeleteItem(null);
-      await load();
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao deletar número.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function createNumber() {
-    const name = newName.trim();
-    const phone = newPhone.trim();
-    if (!name || !phone) return;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      await api.post("/admin/numbers", { name, phone });
-      setNewName("");
-      setNewPhone("");
-      await load();
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || "Erro ao cadastrar número.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <Link
-        href="/app"
-        className="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900"
-      >
-        <span aria-hidden>←</span> Voltar
-      </Link>
-
-      <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-neutral-900">Números</h1>
-          <p className="text-sm text-neutral-600">
-            {numbers.length} cadastrados • status calculado via domínios
-          </p>
-        </div>
-
-        <button
-          onClick={load}
-          disabled={saving}
-          className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm hover:bg-neutral-50 disabled:opacity-60"
-        >
-          Recarregar
-        </button>
-      </div>
-
-      {err && (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {err}
-        </div>
-      )}
-
-      {/* Cadastro */}
-      <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-4">
-        <div className="text-base font-semibold text-neutral-900">
-          Cadastrar novo número
-        </div>
-        <p className="text-sm text-neutral-600">
-          Pode digitar com máscara ou só números (a API normaliza).
-        </p>
-
-        <div className="mt-3 grid gap-2 md:grid-cols-3">
-          <input
-            value={newPhone}
-            onChange={(e) => setNewPhone(e.target.value)}
-            placeholder="Telefone (ex: 11999999999)"
-            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-          />
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Nome do atendente"
-            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-          />
-          <button
-            onClick={createNumber}
-            disabled={saving || !newPhone.trim() || !newName.trim()}
-            className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
-          >
-            {saving ? "Salvando..." : "Cadastrar"}
-          </button>
-        </div>
-      </div>
-
-      {/* Busca */}
-      <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
-        <div className="text-base font-semibold text-neutral-900">
-          Pesquisar números
-        </div>
-        <p className="text-sm text-neutral-600">
-          Busque por telefone ou nome do atendente.
-        </p>
-
-        <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Ex: 1199999 ou Nome"
-            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-          />
-
-          {search.trim() && (
-            <button
-              onClick={() => setSearch("")}
-              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50"
-            >
-              Limpar
-            </button>
-          )}
-        </div>
-
-        <div className="mt-3 text-sm text-neutral-600">
-          Mostrando <span className="font-semibold">{filteredNumbers.length}</span>{" "}
-          de <span className="font-semibold">{numbers.length}</span> número(s)
-        </div>
-      </div>
-
-      {/* Lista */}
-      <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
-        <div className="text-base font-semibold text-neutral-900">
-          Lista de números
-        </div>
-
-        {loading ? (
-          <div className="mt-4 text-sm text-neutral-600">Carregando…</div>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {filteredNumbers.map((n) => {
-              const activeIn = activeMap.get(n._id) ?? [];
-              const linkedIn = linkedMap.get(n._id) ?? [];
-
-              const activeLabel = summarizeDomains(activeIn);
-              const linkedLabel = summarizeDomains(linkedIn);
-
-              const canDelete = activeIn.length === 0 && linkedIn.length === 0;
-
-              return (
-                <div
-                  key={n._id}
-                  className="rounded-2xl border border-neutral-200 bg-white p-3"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <div className="text-sm font-semibold text-neutral-900">
-                        {n.phone}
-                      </div>
-                      <div className="text-xs text-neutral-600">
-                        Atendente: {n.name}
-                      </div>
-
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {activeLabel && (
-                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
-                            Ativo em: {activeLabel}
-                          </span>
-                        )}
-                        {linkedLabel && (
-                          <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-1 text-xs text-sky-700">
-                            Vinculado em: {linkedLabel}
-                          </span>
-                        )}
-                        {!activeLabel && !linkedLabel && (
-                          <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-600">
-                            Livre
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => openEdit(n)}
-                        disabled={saving}
-                        className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm hover:bg-neutral-50 disabled:opacity-60"
-                      >
-                        Editar
-                      </button>
-
-                      <button
-                        onClick={() => requestDelete(n)}
-                        disabled={saving || !canDelete}
-                        title={
-                          canDelete
-                            ? ""
-                            : "Para deletar, desvincule dos domínios e remova como ativo primeiro."
-                        }
-                        className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-60"
-                      >
-                        Deletar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {filteredNumbers.length === 0 && numbers.length > 0 && (
-              <div className="text-sm text-neutral-600">
-                Nenhum número encontrado para a busca informada.
-              </div>
-            )}
-
-            {numbers.length === 0 && (
-              <div className="text-sm text-neutral-600">
-                Nenhum número cadastrado ainda.
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Modal Editar */}
-      {editOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => {
-              setEditOpen(false);
-              setEditItem(null);
-            }}
-          />
-          <div className="relative w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl">
-            <div className="text-base font-semibold text-neutral-900">
-              Editar número
-            </div>
-
-            <div className="mt-3 space-y-2">
-              <div>
-                <label className="text-xs text-neutral-600">Telefone</label>
-                <input
-                  value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-neutral-600">Atendente</label>
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-                />
-              </div>
-
-              <div className="mt-3 flex justify-end gap-2">
-                <button
-                  onClick={() => {
-                    setEditOpen(false);
-                    setEditItem(null);
-                  }}
-                  className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={saveEdit}
-                  disabled={saving || !editName.trim() || !editPhone.trim()}
-                  className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
-                >
-                  {saving ? "Salvando..." : "Salvar"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Deletar */}
-      {deleteOpen && deleteItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => {
-              setDeleteOpen(false);
-              setDeleteItem(null);
-            }}
-          />
-          <div className="relative w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl">
-            <div className="text-base font-semibold text-neutral-900">
-              Confirmar exclusão
-            </div>
-            <p className="mt-2 text-sm text-neutral-600">
-              Tem certeza que deseja deletar o número{" "}
-              <span className="font-medium text-neutral-900">
-                {deleteItem.phone}
-              </span>
-              ?
-            </p>
-
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setDeleteOpen(false);
-                  setDeleteItem(null);
-                }}
-                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={saving}
-                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
-              >
-                {saving ? "Deletando..." : "Deletar"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+    <header className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-semibold">Números</h1>
+      <p className="mt-1 text-sm text-[var(--muted)]">{numbers.length} cadastrados · disponíveis em todos os seus domínios</p></div>
+      <button className="btn px-4 py-2 text-sm" disabled={busy} onClick={() => { setError(""); void load(); }}>Atualizar</button></header>
+    {error && !editing && !deleting && <p role="alert" className="rounded-xl bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-text)]">{error}</p>}
+    {notice && <p role="status" className="rounded-xl bg-[var(--success-bg)] p-3 text-sm text-[var(--success-text)]">{notice}</p>}
+    <section className="card p-5"><h2 className="font-semibold">Cadastrar número</h2>
+      <form onSubmit={create} className="mt-4 grid items-end gap-3 md:grid-cols-[1fr_1fr_auto]">
+        <label className="text-sm">Atendente<input className="input mt-1 w-full" value={name} onChange={e => setName(e.target.value)} required minLength={2} placeholder="Nome do atendente" /></label>
+        <label className="text-sm">Telefone<input className="input mt-1 w-full" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required minLength={8} placeholder="55 11 99999-9999" /></label>
+        <button className="btn-primary rounded-xl px-5 py-2.5 text-sm" disabled={busy || !name.trim() || phone.replace(/\D/g, "").length < 8}>{busy ? "Salvando…" : "Cadastrar número"}</button>
+      </form></section>
+    <section><label className="block text-sm font-medium" htmlFor="number-search">Buscar número ou atendente</label>
+      <input id="number-search" className="input mt-2 w-full" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Digite o telefone ou nome" />
+      <p className="my-3 text-xs text-[var(--muted)]">{filtered.length} resultado(s)</p>
+      {loading ? <p role="status">Carregando números…</p> : <div className="divide-y divide-[var(--border)] rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+        {filtered.map(n => { const active = domains.filter(d => d.isActive && d.activeNumberId === n._id);
+          return <article key={n._id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0"><h2 className="font-semibold">{n.name}</h2><p className="text-sm tabular-nums text-[var(--muted)]">{n.phone}</p>
+              <p className="mt-1 break-words text-xs text-[var(--muted)]">{active.length ? "Ativo em: " + active.map(d => d.domain).join(", ") : "Sem ativação no momento"}</p></div>
+            <div className="flex shrink-0 gap-2"><button className="btn px-3 py-2 text-sm" disabled={busy} onClick={() => { setError(""); setEditing(n); setEditName(n.name); setEditPhone(n.phone); }}>Editar</button>
+              <button className="btn-danger rounded-xl px-3 py-2 text-sm" disabled={busy} onClick={() => { setError(""); setDeleting(n); }}>Excluir</button></div>
+          </article>; })}
+        {!filtered.length && <p className="p-6 text-sm text-[var(--muted)]">{numbers.length ? "Nenhum número encontrado. Tente outra busca." : "Cadastre seu primeiro número acima."}</p>}
+      </div>}
+    </section>
+    <Modal open={!!editing} title="Editar número" confirmText="Salvar alterações" busy={busy} onClose={() => { setEditing(null); setError(""); }} onConfirm={save}>
+      <div className="space-y-3">{error && <p role="alert" className="text-sm text-[var(--danger-text)]">{error}</p>}
+        <label className="block text-sm">Atendente<input className="input mt-1 w-full" value={editName} onChange={e => setEditName(e.target.value)} /></label>
+        <label className="block text-sm">Telefone<input className="input mt-1 w-full" type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} /></label></div>
+    </Modal>
+    <Modal open={!!deleting} title="Excluir número?" description={deleting ? deleting.name + " · " + deleting.phone + ". Será removido de todos os domínios. Sites onde este número está ativo ficarão sem número ativo." : ""} danger busy={busy} confirmText="Excluir número" onClose={() => { setDeleting(null); setError(""); }} onConfirm={remove}>
+      {error && <p role="alert" className="text-sm text-[var(--danger-text)]">{error}</p>}
+    </Modal>
+  </div>;
 }

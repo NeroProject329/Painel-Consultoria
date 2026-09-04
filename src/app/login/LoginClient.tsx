@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "@/lib/api";
-import { setToken } from "@/lib/auth";
+import { api, apiError } from "@/lib/api";
+import { isAuthed, setToken } from "@/lib/auth";
+import PanelMark from "@/components/PanelMark";
 
 export default function LoginClient() {
   const router = useRouter();
@@ -11,13 +12,14 @@ export default function LoginClient() {
 
   const nextUrl = useMemo(() => {
     const n = searchParams.get("next");
-    return n && n.startsWith("/") ? n : "/app";
+    return n && (n === "/app" || n.startsWith("/app/")) ? n : "/app";
   }, [searchParams]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { if (isAuthed()) router.replace(nextUrl); }, [router, nextUrl]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,12 +33,8 @@ export default function LoginClient() {
 
       setToken(data.token);
       router.replace(nextUrl);
-    } catch (error: any) {
-      const msg =
-        error?.response?.data?.error ||
-        error?.message ||
-        "Erro ao entrar. Verifique suas credenciais.";
-      setErr(msg);
+    } catch (error: unknown) {
+      setErr(apiError(error));
     } finally {
       setLoading(false);
     }
@@ -48,15 +46,9 @@ export default function LoginClient() {
         <div className="card overflow-hidden">
           {loading && <div className="progress-bar" />}
 
-          <div className="p-6">
+          <div className="p-6 sm:p-8">
             <div className="mb-5 flex items-center gap-3">
-              <div
-                className="h-10 w-10 rounded-2xl"
-                style={{
-                  background: "linear-gradient(180deg, var(--brand), var(--brand-2))",
-                  boxShadow: "0 18px 55px rgba(0,145,235,0.22)",
-                }}
-              />
+              <PanelMark />
               <div>
                 <h1 className="text-lg font-semibold text-[var(--text)]">
                   Painel — Troca de Números
@@ -68,15 +60,16 @@ export default function LoginClient() {
             </div>
 
             {err && (
-              <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-700">
+              <div role="alert" className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-text)]">
                 {err}
               </div>
             )}
 
             <form onSubmit={onSubmit} className="space-y-3">
               <div>
-                <label className="text-sm text-[var(--muted)]">E-mail</label>
+                <label htmlFor="email" className="text-sm text-[var(--muted)]">E-mail</label>
                 <input
+                  id="email"
                   className="input mt-1 w-full"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -88,8 +81,9 @@ export default function LoginClient() {
               </div>
 
               <div>
-                <label className="text-sm text-[var(--muted)]">Senha</label>
+                <label htmlFor="password" className="text-sm text-[var(--muted)]">Senha</label>
                 <input
+                  id="password"
                   className="input mt-1 w-full"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -117,7 +111,7 @@ export default function LoginClient() {
         </div>
 
         <div className="mt-4 text-center text-xs text-[var(--muted)]">
-          Futuristic Blue • Secure Admin
+          Sua sessão permanece conectada por até 30 dias.
         </div>
       </div>
     </div>

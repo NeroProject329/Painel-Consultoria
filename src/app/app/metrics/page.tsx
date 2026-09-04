@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-import { api } from "@/lib/api";
+import { api, apiError } from "@/lib/api";
 
 import type {
   MetricsPeriod,
@@ -238,12 +238,10 @@ export default function MetricsPage() {
         if (!cancelled) {
           setMetrics(data);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!cancelled) {
           setErr(
-            error?.response
-              ?.data?.error ||
-              "Erro ao carregar as métricas de cliques."
+            apiError(error, "Erro ao carregar as métricas de cliques.")
           );
         }
       } finally {
@@ -380,11 +378,11 @@ export default function MetricsPage() {
     <div className="mx-auto max-w-6xl px-4 py-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-neutral-900">
+          <h1 className="text-xl font-semibold text-[var(--text)]">
             Métricas de cliques
           </h1>
 
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-[var(--muted)]">
             Veja quantos cliques cada número recebeu no período selecionado.
           </p>
         </div>
@@ -397,7 +395,7 @@ export default function MetricsPage() {
             )
           }
           disabled={loading}
-          className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50 disabled:opacity-60"
+          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm hover:bg-[var(--surface-2)] disabled:opacity-60"
         >
           {loading
             ? "Atualizando..."
@@ -405,12 +403,12 @@ export default function MetricsPage() {
         </button>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-4">
-        <div className="text-base font-semibold text-neutral-900">
+      <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <div className="text-base font-semibold text-[var(--text)]">
           Período da análise
         </div>
 
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-[var(--muted)]">
           Os cliques não são apagados. O painel apenas mostra os registros da hora, dia ou semana escolhida.
         </p>
 
@@ -437,8 +435,8 @@ export default function MetricsPage() {
                   "rounded-xl border px-4 py-2 text-sm font-medium transition",
 
                   active
-                    ? "border-sky-500 bg-sky-500 text-white"
-                    : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50",
+                    ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]",
                 ].join(" ")}
               >
                 {periodName(item)}
@@ -449,7 +447,7 @@ export default function MetricsPage() {
 
         <div className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_auto] md:items-end">
           <label className="block">
-            <span className="text-sm text-neutral-600">
+            <span className="text-sm text-[var(--muted)]">
               Data de referência
             </span>
 
@@ -465,13 +463,13 @@ export default function MetricsPage() {
                   event.target.value
                 );
               }}
-              className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
+              className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
             />
           </label>
 
           {period === "hour" ? (
             <label className="block">
-              <span className="text-sm text-neutral-600">
+              <span className="text-sm text-[var(--muted)]">
                 Hora
               </span>
 
@@ -488,7 +486,7 @@ export default function MetricsPage() {
                     )
                   );
                 }}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
+                className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
               >
                 {Array.from(
                   {
@@ -525,7 +523,7 @@ export default function MetricsPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={selectToday}
-              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm hover:bg-[var(--surface-2)]"
             >
               Hoje
             </button>
@@ -534,7 +532,7 @@ export default function MetricsPage() {
               onClick={
                 selectYesterday
               }
-              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm hover:bg-neutral-50"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm hover:bg-[var(--surface-2)]"
             >
               Ontem
             </button>
@@ -542,58 +540,58 @@ export default function MetricsPage() {
         </div>
 
         {followCurrentPeriod && (
-          <div className="mt-3 text-xs text-sky-700">
+          <div className="mt-3 text-xs text-[var(--info-text)]">
             Acompanhando automaticamente o período atual no fuso de São Paulo.
           </div>
         )}
       </div>
 
       {err && (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger-text)]">
           {err}
         </div>
       )}
 
-      <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4">
-        <div className="text-xs font-medium uppercase tracking-wide text-sky-700">
+      <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--info-bg)] p-4">
+        <div className="text-xs font-medium uppercase tracking-wide text-[var(--info-text)]">
           Período exibido
         </div>
 
-        <div className="mt-1 text-base font-semibold text-sky-950">
+        <div className="mt-1 text-base font-semibold text-[var(--info-text)]">
           {periodLabel ||
             "Carregando período..."}
         </div>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-          <div className="text-sm text-neutral-500">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <div className="text-sm text-[var(--muted)]">
             Total de cliques
           </div>
 
-          <div className="mt-2 text-3xl font-semibold text-neutral-900">
+          <div className="mt-2 text-3xl font-semibold text-[var(--text)]">
             {metrics?.summary
               .totalClicks ?? 0}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-          <div className="text-sm text-neutral-500">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <div className="text-sm text-[var(--muted)]">
             Números com cliques
           </div>
 
-          <div className="mt-2 text-3xl font-semibold text-neutral-900">
+          <div className="mt-2 text-3xl font-semibold text-[var(--text)]">
             {metrics?.summary
               .numbersWithClicks ?? 0}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-          <div className="text-sm text-neutral-500">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <div className="text-sm text-[var(--muted)]">
             Média por número
           </div>
 
-          <div className="mt-2 text-3xl font-semibold text-neutral-900">
+          <div className="mt-2 text-3xl font-semibold text-[var(--text)]">
             {(
               metrics?.summary
                 .averagePerNumber ?? 0
@@ -606,15 +604,15 @@ export default function MetricsPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-          <div className="text-sm text-neutral-500">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <div className="text-sm text-[var(--muted)]">
             Mais clicado
           </div>
 
           {metrics?.summary
             .topNumber ? (
             <div className="mt-2">
-              <div className="text-base font-semibold text-neutral-900">
+              <div className="text-base font-semibold text-[var(--text)]">
                 {
                   metrics.summary
                     .topNumber
@@ -622,7 +620,7 @@ export default function MetricsPage() {
                 }
               </div>
 
-              <div className="text-xs text-neutral-600">
+              <div className="text-xs text-[var(--muted)]">
                 {formatPhone(
                   metrics.summary
                     .topNumber
@@ -638,33 +636,33 @@ export default function MetricsPage() {
               </div>
             </div>
           ) : (
-            <div className="mt-2 text-sm text-neutral-600">
+            <div className="mt-2 text-sm text-[var(--muted)]">
               Nenhum clique no período
             </div>
           )}
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-        <div className="border-b border-neutral-200 p-4">
-          <div className="text-base font-semibold text-neutral-900">
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--border)] p-4">
+          <div className="text-base font-semibold text-[var(--text)]">
             Cliques por número
           </div>
 
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-[var(--muted)]">
             Ordenado do número com mais cliques para o número com menos cliques.
           </p>
         </div>
 
         {loading && !metrics ? (
-          <div className="p-6 text-sm text-neutral-600">
+          <div className="p-6 text-sm text-[var(--muted)]">
             Carregando métricas…
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] border-collapse text-left">
               <thead>
-                <tr className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
+                <tr className="border-b border-[var(--border)] bg-[var(--surface-2)] text-xs uppercase tracking-wide text-[var(--muted)]">
                   <th className="px-4 py-3 font-medium">
                     Número
                   </th>
@@ -703,32 +701,32 @@ export default function MetricsPage() {
                       key={
                         item.numberId
                       }
-                      className="border-b border-neutral-100 last:border-b-0"
+                      className="border-b border-[var(--border)] last:border-b-0"
                     >
-                      <td className="px-4 py-4 text-sm font-medium text-neutral-900">
+                      <td className="px-4 py-4 text-sm font-medium text-[var(--text)]">
                         {formatPhone(
                           item.phone
                         )}
                       </td>
 
                       <td className="px-4 py-4">
-                        <div className="text-sm text-neutral-900">
+                        <div className="text-sm text-[var(--text)]">
                           {
                             item.attendantName
                           }
                         </div>
 
                         {item.deleted && (
-                          <span className="mt-1 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
+                          <span className="mt-1 inline-flex rounded-full border border-[var(--border)] bg-[var(--warning-bg)] px-2 py-0.5 text-xs text-[var(--warning-text)]">
                             Número excluído
                           </span>
                         )}
                       </td>
 
                       <td className="px-4 py-4">
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
                           <div
-                            className="h-full rounded-full bg-sky-500 transition-all"
+                            className="h-full rounded-full bg-[var(--brand)] transition-all"
                             style={{
                               width:
                                 `${width}%`,
@@ -737,7 +735,7 @@ export default function MetricsPage() {
                         </div>
                       </td>
 
-                      <td className="px-4 py-4 text-right text-lg font-semibold text-neutral-900">
+                      <td className="px-4 py-4 text-right text-lg font-semibold text-[var(--text)]">
                         {item.clicks}
                       </td>
                     </tr>
@@ -751,7 +749,7 @@ export default function MetricsPage() {
                   <tr>
                     <td
                       colSpan={4}
-                      className="px-4 py-8 text-center text-sm text-neutral-600"
+                      className="px-4 py-8 text-center text-sm text-[var(--muted)]"
                     >
                       Nenhum número cadastrado.
                     </td>

@@ -1,70 +1,30 @@
 "use client";
-
-import { useEffect } from "react";
+import { useEffect, useId, useRef } from "react";
 
 type Props = {
-  open: boolean;
-  title: string;
-  description?: string;
-  confirmText?: string;
-  cancelText?: string;
-  danger?: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
+  open: boolean; title: string; description?: string; confirmText?: string;
+  cancelText?: string; danger?: boolean; busy?: boolean; children?: React.ReactNode;
+  onClose: () => void; onConfirm: () => void;
 };
-
-export default function Modal({
-  open,
-  title,
-  description,
-  confirmText = "Confirmar",
-  cancelText = "Cancelar",
-  danger,
-  onClose,
-  onConfirm,
-}: Props) {
+export default function Modal({ open, title, description, confirmText = "Confirmar",
+  cancelText = "Cancelar", danger, busy = false, children, onClose, onConfirm }: Props) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const id = useId();
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    if (open) window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-5 text-white shadow-2xl">
-        <div className="text-lg font-semibold">{title}</div>
-        {description && (
-          <div className="mt-2 text-sm text-white/70">{description}</div>
-        )}
-
-        <div className="mt-5 flex gap-2 justify-end">
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
-          >
-            {cancelText}
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`rounded-xl px-4 py-2 text-sm font-medium ${
-              danger
-                ? "bg-red-500 hover:bg-red-400 text-white"
-                : "bg-white text-neutral-950 hover:bg-white/90"
-            }`}
-          >
-            {confirmText}
-          </button>
-        </div>
-      </div>
+    const dialog = ref.current;
+    if (open && dialog && !dialog.open) dialog.showModal();
+    if (!open && dialog?.open) dialog.close();
+  }, [open]);
+  return <dialog ref={ref} aria-labelledby={id} aria-describedby={description ? id + "-description" : undefined}
+    onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }}
+    className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-md overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-[var(--text)] backdrop:bg-black/40">
+    <h2 id={id} className="text-lg font-semibold">{title}</h2>
+    {description && <p id={id + "-description"} className="mt-2 text-sm text-[var(--muted)]">{description}</p>}
+    {children && <div className="mt-4">{children}</div>}
+    <div className="mt-6 flex flex-wrap justify-end gap-2">
+      <button type="button" className="btn px-4 py-2 text-sm" disabled={busy} onClick={onClose}>{cancelText}</button>
+      <button type="button" className={(danger ? "btn-danger" : "btn-primary") + " rounded-xl px-4 py-2 text-sm"}
+        disabled={busy} onClick={onConfirm}>{busy ? "Salvando…" : confirmText}</button>
     </div>
-  );
+  </dialog>;
 }
